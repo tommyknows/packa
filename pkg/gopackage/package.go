@@ -50,7 +50,8 @@ func (pkgs *Packages) contain(pkg *Package) bool {
 func (pkg *Package) Install() error {
 	// change to ~/.packago directory to call go-commands
 	// as there should not be a go.mod file
-	cmd := exec.Command("go", "get", pkg.URL+"@"+pkg.Version)
+	cmd := exec.Command("go", "get", "-d", pkg.URL+"@"+pkg.Version)
+	cmd.Dir = path.Join(os.Getenv("HOME"), ".packago")
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	return cmd.Run()

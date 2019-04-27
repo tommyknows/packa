@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	types "git.ramonruettimann.ml/ramon/packago/app/apis/packago"
-	"git.ramonruettimann.ml/ramon/packago/pkg/gopackage"
+	"git.ramonruettimann.ml/ramon/packago/pkg/packages"
 	"github.com/spf13/cobra"
 )
 
@@ -58,8 +58,8 @@ func NewCommandInstall(cfg *types.Configuration) *cobra.Command {
 // parsePackage uses the url to parse the necessary information
 // to create a package struct. This includes the package url,
 // installName (binary name) and the version
-func parsePackage(packageURL, installName string) (*gopackage.Package, error) {
-	pkg := &gopackage.Package{}
+func parsePackage(packageURL, installName string) (*packages.Package, error) {
+	pkg := &packages.Package{}
 
 	pkg.URL = packageURL[:strings.LastIndex(packageURL, "@")]
 

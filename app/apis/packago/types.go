@@ -1,11 +1,11 @@
 package packago
 
-import "git.ramonruettimann.ml/ramon/packago/pkg/gopackage"
+import "git.ramonruettimann.ml/ramon/packago/pkg/packages"
 
 // Configuration is the root element for the config file
 type Configuration struct {
-	Config   *Config            `mapstructure:"config"`
-	Packages gopackage.Packages `mapstructure:"packages"`
+	Config   *Config           `mapstructure:"config"`
+	Packages packages.Packages `mapstructure:"packages"`
 }
 
 // Config contains config options for packago

@@ -1,4 +1,4 @@
-package gopackage
+package packages
 
 import (
 	"os"

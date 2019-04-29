@@ -13,26 +13,13 @@ import (
 
 // Configuration is the root element for the config file
 type Configuration struct {
-	Config   *Config           `mapstructure:"config"`
 	Packages packages.Packages `mapstructure:"packages"`
 	filename string
 }
 
-// Config contains config options for packago
-type Config struct {
-	AutoUpdate bool `mapstructure:"autoUpdate"`
-	// TODO: config options??
-	// autoremove source code when removing packages
-	utoRemove bool `mapstructure:"autoRemove"`
-}
-
 var (
 	// Default provides default values for the configuration
-	Default = Configuration{
-		Config: &Config{
-			AutoUpdate: false,
-		},
-	}
+	Default = Configuration{}
 )
 
 // Load the config from cfgFile into cfg
@@ -46,11 +33,11 @@ func Load(cfgFile string) Configuration {
 	klog.V(3).Infof("Using config file from %v", cfgFile)
 
 	//If a config file is found, read it in.
-	if _, err := os.Stat(cfgFile); os.IsNotExist(err) {
-		klog.Fatalf("NOT IMPLEMENTED: creation of config file")
-	}
+	//if _, err := os.Stat(cfgFile); os.IsNotExist(err) {
+	//}
 	contents, err := ioutil.ReadFile(cfgFile)
-	if err != nil {
+	if err != nil && !os.IsNotExist(err) {
+		klog.Fatalf("error reading config file: %v", err)
 	}
 
 	err = yaml.Unmarshal(contents, cfg)

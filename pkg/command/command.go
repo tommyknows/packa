@@ -6,6 +6,8 @@ import (
 	"os"
 	"os/exec"
 	"path"
+
+	"k8s.io/klog"
 )
 
 const ()
@@ -14,8 +16,14 @@ const ()
 func GoInstall(repo string) (string, error) {
 	// create buffer / writer for command output
 	var b bytes.Buffer
-	stdoutMW := io.MultiWriter(&b, os.Stdout)
-	stderrMW := io.MultiWriter(&b, os.Stderr)
+	var stdoutMW, stderrMW io.Writer
+	if klog.V(1) {
+		stdoutMW = io.MultiWriter(&b, os.Stdout)
+		stderrMW = io.MultiWriter(&b, os.Stderr)
+	} else {
+		stderrMW = io.Writer(&b)
+		stderrMW = io.Writer(&b)
+	}
 
 	cmd := exec.Command("go", "get", repo)
 	// TODO: get working dir from constants

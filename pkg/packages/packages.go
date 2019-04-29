@@ -14,6 +14,7 @@ const (
 	master                  = "master"
 	errWrapGoGet            = "Error executing go get"
 	extractPackagePrefix    = "go: extracting "
+	findingPackagePrefix    = "go: finding "
 	errAlreadyDownloaded    = Error("Package has already been downloaded")
 	errNoExtractPrefix      = Error("Output does not contain the 'go: extracting' prefix")
 	errInvalidExtractOutput = Error("Go Get output does not contain extract dir")
@@ -96,7 +97,8 @@ func (pkgs *Packages) Install(pkg *Package) error {
 		if p.Version == pkg.Version {
 			return ErrPackageAlreadyInstalled
 		}
-		return pkg.UpgradeTo(pkg.Version)
+		klog.V(4).Infof("Changing package version from %v to %v", p.Version, pkg.Version)
+		return p.UpgradeTo(pkg.Version)
 	}
 
 	err := pkg.install()
@@ -108,14 +110,15 @@ func (pkgs *Packages) Install(pkg *Package) error {
 	return nil
 }
 
-func getVersion(output string) string {
+func (pkg *Package) getVersion(output string) string {
 	if !strings.Contains(output, extractPackagePrefix) {
 		return ""
 	}
+
 	var split []string
 	for {
 		split = strings.SplitN(output, "\n", 2)
-		if strings.Contains(split[0], extractPackagePrefix) {
+		if strings.Contains(split[0], extractPackagePrefix+pkg.URL) {
 			return split[0][strings.LastIndex(split[0], " ")+1:]
 		}
 		// last line
@@ -129,7 +132,8 @@ func getVersion(output string) string {
 // InstallAll packages
 func (pkgs *Packages) InstallAll() error {
 	for _, pkg := range *pkgs {
-		klog.V(1).Infof("Installing package %v", pkg)
+		// TODO: find out package name to check if binary already installed
+		// and version of pkg.InstalledVersion is equal to pkg.Version
 		err := pkg.install()
 		if err != nil {
 			return errors.Wrapf(err, errWrapInstallingAllPackages)
@@ -150,14 +154,28 @@ func (pkgs *Packages) contain(pkg *Package) bool {
 // install a given package and set the installed
 // version
 func (pkg *Package) install() error {
-	fmt.Printf("Installing Package %v\n", pkg.URL)
+	fmt.Printf("Installing Package %v@%v...\n", pkg.URL, pkg.Version)
 	output, err := command.GoInstall(pkg.URL + "@" + pkg.Version)
 	if err != nil {
 		return err
 	}
 
-	pkg.InstalledVersion = getVersion(output)
-	fmt.Printf("Installed Package %v\n", pkg.URL)
+	version := pkg.getVersion(output)
+
+	switch {
+	case output == "":
+		break
+	case version != "":
+		pkg.InstalledVersion = version
+	case pkg.InstalledVersion == "":
+		pkg.InstalledVersion = "~" + pkg.Version
+	case !strings.HasPrefix(pkg.InstalledVersion, "~"):
+		pkg.InstalledVersion = "~" + pkg.InstalledVersion
+	default:
+		// DO NOT TOUCH THE INSTALLED VERSION
+	}
+
+	fmt.Printf("Installed Package %v@%v\n", pkg.URL, pkg.Version)
 	return nil
 }
 

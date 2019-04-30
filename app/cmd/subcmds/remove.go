@@ -12,13 +12,13 @@ import (
 
 // NewCommandRemove creates a new instance of the
 // upgrade command
-func NewCommandRemove(cfg *config.Configuration) *cobra.Command {
+func NewCommandRemove(pkgH *packages.PackageHandler) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "remove [repo-url]",
 		Short: "remove packages from given repo",
-		Long:  `Remove the given package / repo-url from the index`,
+		Long:  `Remove the given package / repo-url from the index and remove its binary`,
 		Run: func(cmd *cobra.Command, args []string) {
-			err := remove(cfg, args)
+			err := remove(pkgH, args)
 			if err != nil {
 				fmt.Println(err)
 				os.Exit(-1)
@@ -29,27 +29,23 @@ func NewCommandRemove(cfg *config.Configuration) *cobra.Command {
 	return cmd
 }
 
-func remove(cfg *config.Configuration, args []string) error {
+func remove(pkgH *packages.PackageHandler, args []string) error {
 	if len(args) == 0 {
 		return errors.New("nothing to delete, please specify at least one package to delete")
 	}
 
 	for _, arg := range args {
 		p := packages.CreatePackage(arg)
-		pkg := (*cfg).Packages.GetPackage(p.URL)
-		if pkg == nil {
+		pkg := pkgH.GetPackage(p.URL)
+		if pkg.Package == nil {
 			return errors.New("Package " + arg + " is not installed")
 		}
-		err := (*cfg).Packages.Remove(pkg)
+		err := pkgH.Remove(pkg)
 		if err != nil {
-			if err == packages.ErrPackageAlreadyInstalled {
-				fmt.Printf("%v: %v", pkg.URL, err)
-				return nil
-			}
-			return fmt.Errorf("could not upgrade package:\n%v", err)
+			return fmt.Errorf("could not remove package:\n%v", err)
 		}
 		// write out config
-		err = cfg.SaveConfig()
+		err = config.SaveConfig()
 		if err != nil {
 			return errors.Wrapf(err, "could not write config")
 		}

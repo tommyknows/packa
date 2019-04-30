@@ -12,32 +12,32 @@ import (
 
 // NewCommandInstall creates a new instance of the
 // install command
-func NewCommandInstall(cfg *config.Configuration) *cobra.Command {
-	var installName string
-	cmd := &cobra.Command{
-		Use:   "install [repo-url]",
+func NewCommandInstall(pkgH *packages.PackageHandler) *cobra.Command {
+	return &cobra.Command{
+		Use:   "install [repo-url][@version]",
 		Short: "install packages from given repo",
+		Long: `If no argument / repo-url is given, install all packages that are currently
+defined in the config file.
+
+If an argument / repo-url is given, install this package with the specified version (see
+normal go get URL form). If no version is given, use latest by default`,
 		Run: func(cmd *cobra.Command, args []string) {
-			err := install(cfg, args)
+			err := install(pkgH, args)
 			if err != nil {
 				fmt.Println(err)
 				os.Exit(-1)
 			}
 		},
 	}
-
-	cmd.Flags().StringVar(&installName, "install-name", "", "compile the binary to this name")
-
-	return cmd
 }
 
-func install(cfg *config.Configuration, args []string) error {
+func install(pkgH *packages.PackageHandler, args []string) error {
 	if len(args) == 0 {
-		err := (*cfg).Packages.InstallAll()
+		err := pkgH.InstallAll()
 		if err != nil {
 			return errors.Wrapf(err, "error installing all packages")
 		}
-		err = cfg.SaveConfig()
+		err = config.SaveConfig()
 		if err != nil {
 			return errors.Wrapf(err, "error writing package to config")
 		}
@@ -45,7 +45,7 @@ func install(cfg *config.Configuration, args []string) error {
 
 	for _, arg := range args {
 		pkg := packages.CreatePackage(arg)
-		err := (*cfg).Packages.Install(pkg)
+		err := pkgH.Install(pkg)
 		if err != nil {
 			if err == packages.ErrPackageAlreadyInstalled {
 				fmt.Printf("%v: %v", pkg.URL, err)
@@ -54,11 +54,10 @@ func install(cfg *config.Configuration, args []string) error {
 			return errors.Wrapf(err, "could not install package")
 		}
 		// write out config
-		err = cfg.SaveConfig()
+		err = config.SavePackages(pkgH.ExportPackages())
 		if err != nil {
 			return errors.Wrapf(err, "error writing package to config")
 		}
-
 	}
 	return nil
 }

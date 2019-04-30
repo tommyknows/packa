@@ -6,6 +6,7 @@ import (
 	"path"
 	"strings"
 
+	"git.ramonruettimann.ml/ramon/packago/app/apis/config"
 	"git.ramonruettimann.ml/ramon/packago/pkg/command"
 	"github.com/pkg/errors"
 	"k8s.io/klog"
@@ -35,36 +36,79 @@ type Error string
 // Error implements error
 func (e Error) Error() string { return string(e) }
 
-// Package contains info about a package that needs to be
-// installed
-type Package struct {
-	// URL where to get the package from
-	URL string `yaml:"URL"`
-	// Which version should be installed (semver, go modules!)
-	Version string `yaml:"Version"`
-	// internal: InstalledVersion
-	InstalledVersion string `yaml:"InstalledVersion,omitempty"`
-	// TODO
-	// If the package should be auto-updated
-	//AutoUpdate  bool
+// PackageHandler is a handler for packages
+type PackageHandler struct {
+	packages   []Package
+	workingDir string
 }
 
-// Packages is a list of packages (that are installed!)
-type Packages []*Package
+// Package is a wrapper for the config package
+type Package struct {
+	*config.Package
+}
+
+// NewPackageHandler creates a new handler for packages
+func NewPackageHandler(opts ...func(*PackageHandler) error) (*PackageHandler, error) {
+	h := &PackageHandler{}
+	for _, option := range opts {
+		err := option(h)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return h, nil
+}
+
+// Handle the packages given
+func Handle(pkgs []*config.Package) func(*PackageHandler) error {
+	return func(p *PackageHandler) error {
+		return p.handle(pkgs)
+	}
+}
+
+func (pkgH *PackageHandler) handle(pkgs []*config.Package) error {
+	for _, p := range pkgs {
+		pkgH.packages = append(pkgH.packages, Package{p})
+	}
+
+	return nil
+}
+
+// WorkingDir sets the working directory for the package handler
+func WorkingDir(dir string) func(*PackageHandler) error {
+	return func(p *PackageHandler) error {
+		return p.setWorkingDir(dir)
+	}
+}
+
+func (pkgH *PackageHandler) setWorkingDir(dir string) error {
+	pkgH.workingDir = dir
+	return nil
+}
+
+// ExportPackages as config.Package type
+func (pkgH *PackageHandler) ExportPackages() []*config.Package {
+	var pkgs []*config.Package
+	for _, p := range pkgH.packages {
+		pkgs = append(pkgs, p.Package)
+	}
+
+	return pkgs
+}
 
 // GetPackage returns the package identified by url
-func (pkgs *Packages) GetPackage(url string) *Package {
-	for _, p := range *pkgs {
+func (pkgH *PackageHandler) GetPackage(url string) Package {
+	for _, p := range pkgH.packages {
 		if p.URL == url {
 			return p
 		}
 	}
-	return nil
+	return Package{}
 }
 
 // UpgradeAll packages if needed
-func (pkgs *Packages) UpgradeAll() error {
-	for _, pkg := range *pkgs {
+func (pkgH *PackageHandler) UpgradeAll() error {
+	for _, pkg := range pkgH.packages {
 		// no automatic upgrade if version is pinned to specific semver tag
 		if pkg.Version != latest && pkg.Version != master {
 			fmt.Printf("Not upgrading %v as pinned to %v\n", pkg.URL, pkg.Version)
@@ -79,8 +123,8 @@ func (pkgs *Packages) UpgradeAll() error {
 }
 
 // CreatePackage takes a URL and returns a package
-func CreatePackage(url string) *Package {
-	pkg := &Package{}
+func CreatePackage(url string) Package {
+	pkg := Package{&config.Package{}}
 	lastIdx := strings.LastIndex(url, "@")
 	// No version is given
 	if lastIdx == -1 {
@@ -96,10 +140,10 @@ func CreatePackage(url string) *Package {
 
 // Install a given package if not installed already,
 // also add it to the list
-func (pkgs *Packages) Install(pkg *Package) error {
+func (pkgH *PackageHandler) Install(pkg Package) error {
 	klog.V(3).Infof("Installed called on package %v", pkg)
 	// package already in list, check if upgrade required
-	if p := pkgs.GetPackage(pkg.URL); p != nil {
+	if p := pkgH.GetPackage(pkg.URL); p.Package != nil {
 		klog.V(4).Infof("Comparing versions of %v and %v", p, pkg)
 		if p.Version == pkg.Version {
 			return ErrPackageAlreadyInstalled
@@ -113,36 +157,36 @@ func (pkgs *Packages) Install(pkg *Package) error {
 		return err
 	}
 
-	*pkgs = append(*pkgs, pkg)
+	pkgH.packages = append(pkgH.packages, pkg)
 	return nil
 }
 
 // Remove a binary and remove it from the list
-func (pkgs *Packages) Remove(pkg *Package) error {
+func (pkgH *PackageHandler) Remove(pkg Package) error {
 	err := pkg.Remove()
 	if err != nil {
 		return errors.Wrapf(err, "error removing binary")
 	}
 
 	var i int
-	var p *Package
-	for i, p = range *pkgs {
+	var p Package
+	for i, p = range pkgH.packages {
 		if p.URL == pkg.URL {
 			break
 		}
 	}
-	*pkgs = append((*pkgs)[:i], (*pkgs)[i+1:]...)
+	pkgH.packages = append(pkgH.packages[:i], pkgH.packages[i+1:]...)
 	return nil
 }
 
 // Remove binary for a given package
-func (pkg *Package) Remove() error {
+func (pkg Package) Remove() error {
 	lastIndex := strings.LastIndex(pkg.URL, "/")
 	binaryName := pkg.URL[lastIndex+1:]
 	return os.RemoveAll(path.Join(os.Getenv("GOPATH"), "bin", binaryName))
 }
 
-func (pkg *Package) getVersion(output string) string {
+func (pkg Package) getVersion(output string) string {
 	if !strings.Contains(output, extractPackagePrefix) {
 		return ""
 	}
@@ -162,8 +206,8 @@ func (pkg *Package) getVersion(output string) string {
 }
 
 // InstallAll packages
-func (pkgs *Packages) InstallAll() error {
-	for _, pkg := range *pkgs {
+func (pkgH *PackageHandler) InstallAll() error {
+	for _, pkg := range pkgH.packages {
 		// TODO: find out package name to check if binary already installed
 		// and version of pkg.InstalledVersion is equal to pkg.Version
 		err := pkg.Install()
@@ -174,8 +218,8 @@ func (pkgs *Packages) InstallAll() error {
 	return nil
 }
 
-func (pkgs *Packages) contain(pkg *Package) bool {
-	for _, p := range *pkgs {
+func (pkgH *PackageHandler) contain(pkg Package) bool {
+	for _, p := range pkgH.packages {
 		if p.URL == pkg.URL {
 			return true
 		}
@@ -185,7 +229,7 @@ func (pkgs *Packages) contain(pkg *Package) bool {
 
 // Install a given package and set the installed
 // version
-func (pkg *Package) Install() error {
+func (pkg Package) Install() error {
 	fmt.Printf("Installing Package %v@%v...\n", pkg.URL, pkg.Version)
 	output, err := command.GoInstall(pkg.URL + "@" + pkg.Version)
 	if err != nil {
@@ -215,7 +259,7 @@ func (pkg *Package) Install() error {
 
 // UpgradeTo a specific version and then set the package's version
 // if installation was successful
-func (pkg *Package) UpgradeTo(newVersion string) error {
+func (pkg Package) UpgradeTo(newVersion string) error {
 	pkg.Version = newVersion
 	err := pkg.Install()
 	if err != nil {

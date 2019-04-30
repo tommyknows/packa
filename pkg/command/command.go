@@ -6,7 +6,6 @@ import (
 	"os"
 	"os/exec"
 
-	"git.ramonruettimann.ml/ramon/packago/app/constants"
 	"k8s.io/klog"
 )
 
@@ -25,8 +24,7 @@ func GoInstall(repo string) (string, error) {
 	}
 
 	cmd := exec.Command("go", "get", repo)
-	// TODO: get working dir from constants
-	cmd.Dir = constants.GetDefaultWorkingDir()
+	cmd.Dir = "/Users/ramon/.packago/"
 	cmd.Stdout = stdoutMW
 	cmd.Stderr = stderrMW
 	err := cmd.Run()

@@ -12,7 +12,7 @@ import (
 
 // NewCommandUpgrade creates a new instance of the
 // upgrade command
-func NewCommandUpgrade(cfg *config.Configuration) *cobra.Command {
+func NewCommandUpgrade(pkgH *packages.PackageHandler) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "upgrade [repo-url]",
 		Short: "upgrades packages from given repo",
@@ -23,7 +23,7 @@ specific version will not be touched.
 If a repo-url is given, update the given package to the specified version`,
 
 		Run: func(cmd *cobra.Command, args []string) {
-			err := upgrade(cfg, args)
+			err := upgrade(pkgH, args)
 			if err != nil {
 				fmt.Println(err)
 				os.Exit(-1)
@@ -34,15 +34,17 @@ If a repo-url is given, update the given package to the specified version`,
 	return cmd
 }
 
-func upgrade(cfg *config.Configuration, args []string) error {
+func upgrade(pkgH *packages.PackageHandler, args []string) error {
+	//pkgH, err := packages.NewPackageHandler(packages.SetPackageList(cfg.Packages))
 	if len(args) == 0 {
-		(*cfg).Packages.UpgradeAll()
+		return pkgH.UpgradeAll()
 	}
 
 	for _, arg := range args {
 		p := packages.CreatePackage(arg)
-		pkg := (*cfg).Packages.GetPackage(p.URL)
-		if pkg == nil {
+		//pkg := (*cfg).Packages.GetPackage(p.URL)
+		pkg := pkgH.GetPackage(p.URL)
+		if pkg.Package == nil {
 			return errors.New("Package " + arg + " is not installed")
 		}
 		// extract version and set the package to that,
@@ -61,5 +63,5 @@ func upgrade(cfg *config.Configuration, args []string) error {
 		}
 	}
 	// write out config
-	return cfg.SaveConfig()
+	return config.SaveConfig()
 }

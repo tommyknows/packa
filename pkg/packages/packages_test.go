@@ -3,6 +3,7 @@ package packages
 import (
 	"testing"
 
+	"git.ramonruettimann.ml/ramon/packago/app/apis/config"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -14,22 +15,28 @@ func TestCreatePackage(t *testing.T) {
 		{
 			url: "test.com/package@latest",
 			pkg: Package{
-				URL:     "test.com/package",
-				Version: "latest",
+				&config.Package{
+					URL:     "test.com/package",
+					Version: "latest",
+				},
 			},
 		},
 		{
 			url: "abc.def/another/subpackage@v0.0.1",
 			pkg: Package{
-				URL:     "abc.def/another/subpackage",
-				Version: "v0.0.1",
+				&config.Package{
+					URL:     "abc.def/another/subpackage",
+					Version: "v0.0.1",
+				},
 			},
 		},
 		{
 			url: "abc.def/nogiven/version",
 			pkg: Package{
-				URL:     "abc.def/nogiven/version",
-				Version: "latest",
+				&config.Package{
+					URL:     "abc.def/nogiven/version",
+					Version: "latest",
+				},
 			},
 		},
 	}

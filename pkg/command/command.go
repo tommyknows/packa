@@ -5,14 +5,13 @@ import (
 	"io"
 	"os"
 	"os/exec"
-	"path"
 
+	"git.ramonruettimann.ml/ramon/packago/app/constants"
 	"k8s.io/klog"
 )
 
-const ()
-
-// GoInstall calls go get to install a package
+// GoInstall calls go get to install a package and returns
+// output and exit code
 func GoInstall(repo string) (string, error) {
 	// create buffer / writer for command output
 	var b bytes.Buffer
@@ -27,7 +26,7 @@ func GoInstall(repo string) (string, error) {
 
 	cmd := exec.Command("go", "get", repo)
 	// TODO: get working dir from constants
-	cmd.Dir = path.Join(os.Getenv("HOME"), ".packago")
+	cmd.Dir = constants.GetDefaultWorkingDir()
 	cmd.Stdout = stdoutMW
 	cmd.Stderr = stderrMW
 	err := cmd.Run()

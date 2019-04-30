@@ -6,6 +6,7 @@ import (
 
 	"git.ramonruettimann.ml/ramon/packago/app/apis/config"
 	"git.ramonruettimann.ml/ramon/packago/pkg/packages"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -17,26 +18,9 @@ func NewCommandInstall(cfg *config.Configuration) *cobra.Command {
 		Use:   "install [repo-url]",
 		Short: "install packages from given repo",
 		Run: func(cmd *cobra.Command, args []string) {
-			switch len(args) {
-			case 0:
-				(*cfg).Packages.InstallAll()
-			case 1:
-				pkg := packages.CreatePackage(args[0])
-				err := (*cfg).Packages.Install(pkg)
-				if err != nil {
-					if err == packages.ErrPackageAlreadyInstalled {
-						fmt.Printf("%v: %v", pkg.URL, err)
-						os.Exit(0)
-					}
-					fmt.Printf("Could not install package: %v", err)
-					os.Exit(-1)
-				}
-
-			}
-			// write out config
-			err := cfg.SaveConfig()
+			err := install(cfg, args)
 			if err != nil {
-				fmt.Printf("error saving config: %v", err)
+				fmt.Println(err)
 				os.Exit(-1)
 			}
 		},
@@ -45,4 +29,36 @@ func NewCommandInstall(cfg *config.Configuration) *cobra.Command {
 	cmd.Flags().StringVar(&installName, "install-name", "", "compile the binary to this name")
 
 	return cmd
+}
+
+func install(cfg *config.Configuration, args []string) error {
+	if len(args) == 0 {
+		err := (*cfg).Packages.InstallAll()
+		if err != nil {
+			return errors.Wrapf(err, "error installing all packages")
+		}
+		err = cfg.SaveConfig()
+		if err != nil {
+			return errors.Wrapf(err, "error writing package to config")
+		}
+	}
+
+	for _, arg := range args {
+		pkg := packages.CreatePackage(arg)
+		err := (*cfg).Packages.Install(pkg)
+		if err != nil {
+			if err == packages.ErrPackageAlreadyInstalled {
+				fmt.Printf("%v: %v", pkg.URL, err)
+				return nil
+			}
+			return errors.Wrapf(err, "could not install package")
+		}
+		// write out config
+		err = cfg.SaveConfig()
+		if err != nil {
+			return errors.Wrapf(err, "error writing package to config")
+		}
+
+	}
+	return nil
 }

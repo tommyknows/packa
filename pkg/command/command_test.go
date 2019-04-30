@@ -11,7 +11,7 @@ func TestInstall(t *testing.T) {
 	expectedOutput := `usage: go get [-d] [-m] [-u] [-v] [-insecure] [build flags] [packages]
 Run 'go help get' for details.
 `
-	out, err := GoInstall(cmd)
+	output, err := GoInstall(cmd)
 	assert.NotNil(t, err)
-	assert.Equal(t, expectedOutput, out)
+	assert.Equal(t, expectedOutput, output)
 }

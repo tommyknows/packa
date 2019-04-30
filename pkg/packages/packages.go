@@ -2,6 +2,8 @@ package packages
 
 import (
 	"fmt"
+	"os"
+	"path"
 	"strings"
 
 	"git.ramonruettimann.ml/ramon/packago/pkg/command"
@@ -21,7 +23,7 @@ const (
 	errNoGoDownloadOutput   = Error("Go download output is empty string")
 	// ErrPackageAlreadyInstalled is returned if a package is already installed
 	ErrPackageAlreadyInstalled   = Error("Package has already been installed")
-	errNoUpdateNeeded            = Error("No update needed as version is pinned")
+	errNoUpgradeNeeded           = Error("No update needed as version is pinned")
 	errWrapInstallingAllPackages = "Error installing all packages"
 	errWrapUpgradingAllPackages  = "Error upgrading all packages"
 	errWrapUpgradePackageFailed  = "Error upgrading package"
@@ -63,8 +65,13 @@ func (pkgs *Packages) GetPackage(url string) *Package {
 // UpgradeAll packages if needed
 func (pkgs *Packages) UpgradeAll() error {
 	for _, pkg := range *pkgs {
-		err := pkg.UpgradeLatest()
-		if err != nil && err != errNoUpdateNeeded {
+		// no automatic upgrade if version is pinned to specific semver tag
+		if pkg.Version != latest && pkg.Version != master {
+			fmt.Printf("Not upgrading %v as pinned to %v\n", pkg.URL, pkg.Version)
+			continue
+		}
+		err := pkg.Install()
+		if err != nil && err != errNoUpgradeNeeded {
 			return errors.Wrapf(err, errWrapUpgradingAllPackages)
 		}
 	}
@@ -101,13 +108,38 @@ func (pkgs *Packages) Install(pkg *Package) error {
 		return p.UpgradeTo(pkg.Version)
 	}
 
-	err := pkg.install()
+	err := pkg.Install()
 	if err != nil {
 		return err
 	}
 
 	*pkgs = append(*pkgs, pkg)
 	return nil
+}
+
+// Remove a binary and remove it from the list
+func (pkgs *Packages) Remove(pkg *Package) error {
+	err := pkg.Remove()
+	if err != nil {
+		return errors.Wrapf(err, "error removing binary")
+	}
+
+	var i int
+	var p *Package
+	for i, p = range *pkgs {
+		if p.URL == pkg.URL {
+			break
+		}
+	}
+	*pkgs = append((*pkgs)[:i], (*pkgs)[i+1:]...)
+	return nil
+}
+
+// Remove binary for a given package
+func (pkg *Package) Remove() error {
+	lastIndex := strings.LastIndex(pkg.URL, "/")
+	binaryName := pkg.URL[lastIndex+1:]
+	return os.RemoveAll(path.Join(os.Getenv("GOPATH"), "bin", binaryName))
 }
 
 func (pkg *Package) getVersion(output string) string {
@@ -134,7 +166,7 @@ func (pkgs *Packages) InstallAll() error {
 	for _, pkg := range *pkgs {
 		// TODO: find out package name to check if binary already installed
 		// and version of pkg.InstalledVersion is equal to pkg.Version
-		err := pkg.install()
+		err := pkg.Install()
 		if err != nil {
 			return errors.Wrapf(err, errWrapInstallingAllPackages)
 		}
@@ -151,51 +183,43 @@ func (pkgs *Packages) contain(pkg *Package) bool {
 	return false
 }
 
-// install a given package and set the installed
+// Install a given package and set the installed
 // version
-func (pkg *Package) install() error {
+func (pkg *Package) Install() error {
 	fmt.Printf("Installing Package %v@%v...\n", pkg.URL, pkg.Version)
 	output, err := command.GoInstall(pkg.URL + "@" + pkg.Version)
 	if err != nil {
-		return err
+		// output already contains newline
+		return fmt.Errorf("%v%v", output, err)
 	}
 
 	version := pkg.getVersion(output)
 
+	// TODO: what?
 	switch {
 	case output == "":
-		break
+		pkg.InstalledVersion = pkg.Version
 	case version != "":
 		pkg.InstalledVersion = version
 	case pkg.InstalledVersion == "":
 		pkg.InstalledVersion = "~" + pkg.Version
-	case !strings.HasPrefix(pkg.InstalledVersion, "~"):
-		pkg.InstalledVersion = "~" + pkg.InstalledVersion
+	case strings.HasPrefix(pkg.InstalledVersion, "~"):
+		break
 	default:
-		// DO NOT TOUCH THE INSTALLED VERSION
+		pkg.InstalledVersion = "~" + pkg.Version
 	}
 
-	fmt.Printf("Installed Package %v@%v\n", pkg.URL, pkg.Version)
+	fmt.Printf("Installed Package %v@%v\n", pkg.URL, pkg.InstalledVersion)
 	return nil
-}
-
-// UpgradeLatest upgrades a package if version is set
-// to latest or master
-func (pkg *Package) UpgradeLatest() error {
-	if pkg.Version != latest && pkg.Version != master {
-		return errNoUpdateNeeded
-	}
-	err := pkg.install()
-	return err
 }
 
 // UpgradeTo a specific version and then set the package's version
 // if installation was successful
 func (pkg *Package) UpgradeTo(newVersion string) error {
-	err := pkg.install()
+	pkg.Version = newVersion
+	err := pkg.Install()
 	if err != nil {
 		return errors.Wrapf(err, errWrapUpgradePackageFailed)
 	}
-	pkg.Version = newVersion
 	return nil
 }

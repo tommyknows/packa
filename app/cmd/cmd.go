@@ -24,6 +24,8 @@ func NewPackagoCommand(in io.Reader, out, err io.Writer) *cobra.Command {
 		cfg = config.Load(cfgFile)
 	})
 	cmd.AddCommand(subcmds.NewCommandInstall(&cfg))
+	cmd.AddCommand(subcmds.NewCommandUpgrade(&cfg))
+	cmd.AddCommand(subcmds.NewCommandRemove(&cfg))
 
 	return cmd
 }

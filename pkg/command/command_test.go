@@ -7,11 +7,13 @@ import (
 )
 
 func TestInstall(t *testing.T) {
+	cmdH, err := NewHandler()
+	assert.Nil(t, err)
 	cmd := "-h"
 	expectedOutput := `usage: go get [-d] [-m] [-u] [-v] [-insecure] [build flags] [packages]
 Run 'go help get' for details.
 `
-	output, err := GoInstall(cmd)
+	output, err := cmdH.Install(cmd)
 	assert.NotNil(t, err)
 	assert.Equal(t, expectedOutput, output)
 }

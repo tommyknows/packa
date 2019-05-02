@@ -5,9 +5,10 @@ import (
 	"os"
 
 	"git.ramonruettimann.ml/ramon/packago/app/apis/config"
-	"git.ramonruettimann.ml/ramon/packago/pkg/packages"
+	packages "git.ramonruettimann.ml/ramon/packago/pkg/packagehandler"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+	"k8s.io/klog"
 )
 
 // NewCommandInstall creates a new instance of the
@@ -32,32 +33,14 @@ normal go get URL form). If no version is given, use latest by default`,
 }
 
 func install(pkgH *packages.PackageHandler, args []string) error {
-	if len(args) == 0 {
-		err := pkgH.InstallAll()
+	defer func() {
+		err := config.SavePackages(pkgH.ExportPackages())
 		if err != nil {
-			return errors.Wrapf(err, "error installing all packages")
+			klog.Fatalf("Could not write package state: %v", err)
 		}
-		err = config.SaveConfig()
-		if err != nil {
-			return errors.Wrapf(err, "error writing package to config")
-		}
-	}
+	}()
 
-	for _, arg := range args {
-		pkg := packages.CreatePackage(arg)
-		err := pkgH.Install(pkg)
-		if err != nil {
-			if err == packages.ErrPackageAlreadyInstalled {
-				fmt.Printf("%v: %v", pkg.URL, err)
-				return nil
-			}
-			return errors.Wrapf(err, "could not install package")
-		}
-		// write out config
-		err = config.SavePackages(pkgH.ExportPackages())
-		if err != nil {
-			return errors.Wrapf(err, "error writing package to config")
-		}
-	}
-	return nil
+	pkgs := pkgH.GetPackages(args...)
+	err := pkgH.Install(pkgs...)
+	return errors.Wrapf(err, "could not install package(s)")
 }

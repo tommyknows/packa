@@ -9,7 +9,8 @@ import (
 
 	"git.ramonruettimann.ml/ramon/packago/app/apis/config"
 	"git.ramonruettimann.ml/ramon/packago/app/cmd/subcmds"
-	"git.ramonruettimann.ml/ramon/packago/pkg/packages"
+	"git.ramonruettimann.ml/ramon/packago/pkg/command"
+	packages "git.ramonruettimann.ml/ramon/packago/pkg/packagehandler"
 	"github.com/spf13/cobra"
 )
 
@@ -26,7 +27,14 @@ func NewPackagoCommand(in io.Reader, out, err io.Writer) *cobra.Command {
 	cmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file location")
 	cobra.OnInitialize(func() {
 		cfg = config.Load(cfgFile)
-		pkgHP, err := packages.NewPackageHandler(packages.Handle(cfg.Packages))
+
+		cmdHandler, err := command.NewHandler(command.WorkingDir(config.GetWorkingDir()))
+		if err != nil {
+			fmt.Printf("Error setting up CLI: %v\n", err)
+			os.Exit(-1)
+		}
+
+		pkgHP, err := packages.NewPackageHandler(cmdHandler, packages.Handle(cfg.Packages))
 		pkgH = *pkgHP
 		if err != nil {
 			fmt.Printf("Error setting up CLI: %v\n", err)

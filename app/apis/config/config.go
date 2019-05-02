@@ -16,10 +16,15 @@ var cfg *Configuration
 const (
 	// ConfigFileLocalDir is the user-local directory to search for
 	// a config file
-	ConfigFileLocalDir = "$HOME/.packago"
+	ConfigFileLocalDir = ".packago"
 	// ConfigFileName is the default name for the config file
 	ConfigFileName = "packago.yml"
 )
+
+// GetConfigFilename gets the configuration filename
+func GetConfigFilename() string {
+	return path.Join(os.Getenv("HOME"), ConfigFileLocalDir, ConfigFileName)
+}
 
 // GetWorkingDir gets the default working directory
 func GetWorkingDir() string {
@@ -74,7 +79,7 @@ func Load(cfgFile string) Configuration {
 
 	// if cfgFile is not defined, get the default config file name
 	if cfgFile == "" {
-		cfgFile = path.Join(ConfigFileLocalDir, ConfigFileName)
+		cfgFile = GetConfigFilename()
 	}
 	klog.V(3).Infof("Using config file from %v", cfgFile)
 

@@ -19,6 +19,7 @@ func TestCreatePackage(t *testing.T) {
 					URL:     "test.com/package",
 					Version: "latest",
 				},
+				nil,
 			},
 		},
 		{
@@ -28,6 +29,7 @@ func TestCreatePackage(t *testing.T) {
 					URL:     "abc.def/another/subpackage",
 					Version: "v0.0.1",
 				},
+				nil,
 			},
 		},
 		{
@@ -37,13 +39,14 @@ func TestCreatePackage(t *testing.T) {
 					URL:     "abc.def/nogiven/version",
 					Version: "latest",
 				},
+				nil,
 			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.url, func(t *testing.T) {
-			p := CreatePackage(tt.url)
+			p := NewPackage(tt.url, nil)
 			assert.Equal(t, tt.pkg.URL, p.URL)
 			assert.Equal(t, tt.pkg.Version, p.Version)
 		})

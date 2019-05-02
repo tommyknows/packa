@@ -5,9 +5,9 @@ import (
 	"os"
 
 	"git.ramonruettimann.ml/ramon/packago/app/apis/config"
-	"git.ramonruettimann.ml/ramon/packago/pkg/packages"
-	"github.com/pkg/errors"
+	packages "git.ramonruettimann.ml/ramon/packago/pkg/packagehandler"
 	"github.com/spf13/cobra"
+	"k8s.io/klog"
 )
 
 // NewCommandUpgrade creates a new instance of the
@@ -21,6 +21,7 @@ or "master" set as their versions will be upgraded. Packages pinned to a
 specific version will not be touched.
 
 If a repo-url is given, update the given package to the specified version`,
+		Args: cobra.MaximumNArgs(0),
 
 		Run: func(cmd *cobra.Command, args []string) {
 			err := upgrade(pkgH, args)
@@ -35,33 +36,12 @@ If a repo-url is given, update the given package to the specified version`,
 }
 
 func upgrade(pkgH *packages.PackageHandler, args []string) error {
-	//pkgH, err := packages.NewPackageHandler(packages.SetPackageList(cfg.Packages))
-	if len(args) == 0 {
-		return pkgH.UpgradeAll()
-	}
-
-	for _, arg := range args {
-		p := packages.CreatePackage(arg)
-		//pkg := (*cfg).Packages.GetPackage(p.URL)
-		pkg := pkgH.GetPackage(p.URL)
-		if pkg.Package == nil {
-			return errors.New("Package " + arg + " is not installed")
-		}
-		// extract version and set the package to that,
-		// so that install installs this version
-		if pkg.Version == p.Version {
-			return errors.New("Not upgrading package " + p.URL + "@" + p.Version + " as same version already installed")
-		}
-		pkg.Version = p.Version
-		err := pkg.Install()
+	defer func() {
+		err := config.SavePackages(pkgH.ExportPackages())
 		if err != nil {
-			if err == packages.ErrPackageAlreadyInstalled {
-				fmt.Printf("%v: %v", pkg.URL, err)
-				return nil
-			}
-			return fmt.Errorf("could not upgrade package:\n%v", err)
+			klog.Fatalf("Could not write package state: %v", err)
 		}
-	}
-	// write out config
-	return config.SaveConfig()
+	}()
+
+	return pkgH.UpgradeAll()
 }

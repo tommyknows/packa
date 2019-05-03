@@ -7,44 +7,32 @@ import (
 	"os"
 	"path"
 
+	"git.ramonruettimann.ml/ramon/packa/app/apis/defaults"
 	"github.com/ghodss/yaml"
 	"k8s.io/klog"
 )
 
-var cfg *Configuration
-
-const (
-	// ConfigFileLocalDir is the user-local directory to search for
-	// a config file
-	ConfigFileLocalDir = ".packago"
-	// ConfigFileName is the default name for the config file
-	ConfigFileName = "packago.yml"
-)
-
-// GetConfigFilename gets the configuration filename
-func GetConfigFilename() string {
-	return path.Join(os.Getenv("HOME"), ConfigFileLocalDir, ConfigFileName)
-}
-
-// GetWorkingDir gets the default working directory
-func GetWorkingDir() string {
-	if cfg.Config.WorkingDir != "" {
-		return cfg.Config.WorkingDir
+var (
+	// cfg is the Configuration initialised
+	// to its defaults
+	cfg = &Configuration{
+		filename: defaults.ConfigFileFullPath(),
+		Packages: []*Package{
+			{
+				URL:     "git.ramonruettimann.ml/ramon/packa",
+				Version: "latest",
+			},
+		},
 	}
-	return path.Join(os.Getenv("HOME"), ".packago")
-}
-
-// GetBinaryDir returns the default directory in which to
-// search for installed Go Binaries
-func GetBinaryDir() string {
-	// if cfg ??
-	// return cfg value if set
-	return path.Join(os.Getenv("GOPATH"), "bin")
-}
+	// Default provides default values for the configuration
+	Default = Configuration{}
+)
 
 // Configuration is the root element for the config file
 type Configuration struct {
-	Config   appConfig  `yaml:"Config,omitempty"`
+	// Config is the configuration for the program
+	Config AppConfig `yaml:"Config,omitempty"`
+	// Packages contains the full list of packages in the state file
 	Packages []*Package `yaml:"Packages,omitempty"`
 	// filename is just a temporary info to write the config
 	// back to the original source
@@ -62,30 +50,56 @@ type Package struct {
 	InstalledVersion string `yaml:"InstalledVersion,omitempty"`
 }
 
-type appConfig struct {
+// AppConfig specifies configuration for the packa application
+type AppConfig struct {
 	// workingDir specifies where all the go get commands are executed
 	WorkingDir string `yaml:"WorkingDir,omitempty"`
+	// binaryDir specifies the binary location (defaults to $GOPATH/bin)
+	BinaryDir string `yaml:"BinaryDir,omitempty"`
 }
 
-var (
-	// Default provides default values for the configuration
-	Default = Configuration{}
-)
+// WorkingDir gets the default working directory
+func WorkingDir() string {
+	if cfg.Config.WorkingDir != "" {
+		return cfg.Config.WorkingDir
+	}
+	return defaults.WorkingDir()
+}
+
+// BinaryDir returns the directory in which to
+// search for installed Go Binaries
+func BinaryDir() string {
+	if cfg.Config.BinaryDir != "" {
+		return cfg.Config.BinaryDir
+	}
+	return defaults.BinaryDir()
+}
 
 // Load the config from cfgFile into cfg
 func Load(cfgFile string) Configuration {
-	// Read in default config values
-	cfg = &Default
-
 	// if cfgFile is not defined, get the default config file name
 	if cfgFile == "" {
-		cfgFile = GetConfigFilename()
+		cfgFile = defaults.ConfigFileFullPath()
+		// create directory if not exists
+		if _, err := os.Stat(path.Dir(cfgFile)); os.IsNotExist(err) {
+			err := os.MkdirAll(path.Dir(cfgFile), 0777)
+			if err != nil {
+				klog.Fatalf("could not create directory for config file: %v", err)
+			}
+			klog.Infof("Created default working directory at %v", path.Dir(cfgFile))
+		}
 	}
 	klog.V(3).Infof("Using config file from %v", cfgFile)
 
 	//If a config file is found, read it in.
 	contents, err := ioutil.ReadFile(cfgFile)
-	if err != nil && !os.IsNotExist(err) {
+	if err != nil {
+		klog.Infof("Encountered error %v", err)
+		if os.IsNotExist(err) {
+			// returns the default config
+			klog.Infof("returning config %v", cfg)
+			return *cfg
+		}
 		klog.Fatalf("error reading config file: %v", err)
 	}
 
@@ -114,6 +128,21 @@ func SaveConfig() error {
 		klog.Fatalf("Error marshaling config to yaml: %v", err)
 	}
 	fmt.Printf("%s", y)
+	fmt.Printf("Directory: %v\n", path.Dir(cfg.filename))
+
+	//_, err = os.Stat(path.Dir(cfg.filename))
+	//if err != nil {
+	//if os.IsNotExist(err) {
+	//err := os.MkdirAll(path.Dir(cfg.filename), 0777)
+	//if err != nil {
+	//klog.Fatalf("could not create directory for config file: %v", err)
+	//}
+	//klog.Infof("Created default config directory at %v", path.Dir(cfg.filename))
+	//} else {
+	//klog.Fatalf("Unknown error: %v", err)
+	//}
+	//}
+
 	err = ioutil.WriteFile(cfg.filename, y, 0644)
 	if err != nil {
 		klog.Fatalf("error writing config file: %v", err)

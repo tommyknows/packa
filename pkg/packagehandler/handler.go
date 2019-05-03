@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"git.ramonruettimann.ml/ramon/packago/app/apis/config"
+	"git.ramonruettimann.ml/ramon/packa/app/apis/config"
 	"github.com/pkg/errors"
 )
 
@@ -142,6 +142,15 @@ func (ie InstallError) Error() string {
 	return s
 }
 
+// IfNotNil returns a non-nil error if there
+// is any error inside the installError
+func (ie InstallError) IfNotNil() error {
+	for range ie {
+		return ie
+	}
+	return nil
+}
+
 // Install the given packages and add them to the
 // list of packages. Returns an InstallError that contains
 // a map of the failed packages withe the error message.
@@ -168,7 +177,7 @@ func (pkgH *PackageHandler) Install(pkgs ...Package) error {
 			pkgH.packages = append(pkgH.packages, pkg)
 		}
 	}
-	return nil
+	return collectionErr.IfNotNil()
 }
 
 // Remove binaries and from the list

@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"path"
 
+	"git.ramonruettimann.ml/ramon/packa/app/apis/defaults"
 	"k8s.io/klog"
 )
 
@@ -18,8 +19,7 @@ type Handler struct {
 // NewHandler creates a new handler for commands
 func NewHandler(opts ...func(*Handler) error) (*Handler, error) {
 	h := &Handler{
-		// TODO: get sensible default value from config / constants
-		workingDir: "/Users/ramon/.packago",
+		workingDir: defaults.WorkingDir(),
 	}
 
 	for _, option := range opts {

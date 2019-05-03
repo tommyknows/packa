@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"git.ramonruettimann.ml/ramon/packago/app/apis/config"
+	"git.ramonruettimann.ml/ramon/packa/app/apis/config"
 	"github.com/pkg/errors"
 	"k8s.io/klog"
 )

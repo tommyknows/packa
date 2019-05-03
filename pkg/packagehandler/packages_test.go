@@ -3,7 +3,7 @@ package packages
 import (
 	"testing"
 
-	"git.ramonruettimann.ml/ramon/packago/app/apis/config"
+	"git.ramonruettimann.ml/ramon/packa/app/apis/config"
 	"github.com/stretchr/testify/assert"
 )
 

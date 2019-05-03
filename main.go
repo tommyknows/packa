@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"git.ramonruettimann.ml/ramon/packago/app"
+	"git.ramonruettimann.ml/ramon/packa/app"
 	"k8s.io/klog"
 )
 

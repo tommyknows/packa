@@ -7,10 +7,10 @@ import (
 	"io"
 	"os"
 
-	"git.ramonruettimann.ml/ramon/packago/app/apis/config"
-	"git.ramonruettimann.ml/ramon/packago/app/cmd/subcmds"
-	"git.ramonruettimann.ml/ramon/packago/pkg/command"
-	packages "git.ramonruettimann.ml/ramon/packago/pkg/packagehandler"
+	"git.ramonruettimann.ml/ramon/packa/app/apis/config"
+	"git.ramonruettimann.ml/ramon/packa/app/cmd/subcmds"
+	"git.ramonruettimann.ml/ramon/packa/pkg/command"
+	packages "git.ramonruettimann.ml/ramon/packa/pkg/packagehandler"
 	"github.com/spf13/cobra"
 )
 
@@ -28,7 +28,7 @@ func NewPackagoCommand(in io.Reader, out, err io.Writer) *cobra.Command {
 	cobra.OnInitialize(func() {
 		cfg = config.Load(cfgFile)
 
-		cmdHandler, err := command.NewHandler(command.WorkingDir(config.GetWorkingDir()))
+		cmdHandler, err := command.NewHandler(command.WorkingDir(config.WorkingDir()))
 		if err != nil {
 			fmt.Printf("Error setting up CLI: %v\n", err)
 			os.Exit(-1)

@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os"
 
-	"git.ramonruettimann.ml/ramon/packago/app/apis/config"
-	packages "git.ramonruettimann.ml/ramon/packago/pkg/packagehandler"
+	"git.ramonruettimann.ml/ramon/packa/app/apis/config"
+	packages "git.ramonruettimann.ml/ramon/packa/pkg/packagehandler"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"k8s.io/klog"

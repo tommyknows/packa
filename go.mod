@@ -1,4 +1,4 @@
-module git.ramonruettimann.ml/ramon/packago
+module git.ramonruettimann.ml/ramon/packa
 
 go 1.12
 

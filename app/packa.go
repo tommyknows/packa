@@ -4,7 +4,7 @@ import (
 	"flag"
 	"os"
 
-	"git.ramonruettimann.ml/ramon/packago/app/cmd"
+	"git.ramonruettimann.ml/ramon/packa/app/cmd"
 	"github.com/spf13/pflag"
 )
 

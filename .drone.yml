@@ -7,7 +7,7 @@ workspace:
 
 steps:
   - name: test
-    image: golang
+    image: golang:1.12
     commands:
       - go get
       - go test ./... -v -cover

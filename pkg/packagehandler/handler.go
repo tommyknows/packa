@@ -24,9 +24,41 @@ type PackageHandler struct {
 // CommandHandler contains commands that are used to install packages
 type CommandHandler interface {
 	// Install a go package
-	Install(repo string) (string, error)
+	Install(repo, version string) (string, error)
 	// Remove a go package (or just its binary)
 	Remove(binaryName string) error
+}
+
+// InstallError "collects" all errors while installing package(s)
+type InstallError map[Package]error
+
+// Add an error if non-nil
+func (ie InstallError) add(pkg Package, err error) {
+	if err != nil {
+		ie[pkg] = err
+	}
+}
+
+func (ie InstallError) Error() string {
+	if len(ie) == 0 {
+		return "No errors collected"
+	}
+
+	s := "Encountered error(s) while handling packages:"
+	for pkg, err := range ie {
+		s += fmt.Sprintf("\n%s@%s: %s", pkg.URL, pkg.Version, err.Error())
+	}
+
+	return s
+}
+
+// IfNotNil returns a non-nil error if there
+// is any error inside the installError
+func (ie InstallError) IfNotNil() error {
+	if len(ie) == 0 {
+		return nil
+	}
+	return ie
 }
 
 // NewPackageHandler creates a new handler for packages
@@ -43,14 +75,6 @@ func NewPackageHandler(cmdH CommandHandler, opts ...func(*PackageHandler) error)
 	return h, nil
 }
 
-// SetCommandHandler to use for installing and removing packages
-func SetCommandHandler(cmdH CommandHandler) func(*PackageHandler) error {
-	return func(pkgH *PackageHandler) error {
-		pkgH.cmdHandler = cmdH
-		return nil
-	}
-}
-
 // Handle the packages given
 func Handle(pkgs []*config.Package) func(*PackageHandler) error {
 	return func(pkgH *PackageHandler) error {
@@ -61,14 +85,18 @@ func Handle(pkgs []*config.Package) func(*PackageHandler) error {
 	}
 }
 
-// ExportPackages as config.Package type
-func (pkgH *PackageHandler) ExportPackages() []*config.Package {
-	var pkgs []*config.Package
-	for _, p := range pkgH.packages {
+func convertPackages(conv ...Package) []*config.Package {
+	pkgs := []*config.Package{}
+	for _, p := range conv {
 		pkgs = append(pkgs, p.Package)
 	}
 
 	return pkgs
+}
+
+// ExportPackages as config.Package type
+func (pkgH *PackageHandler) ExportPackages() []*config.Package {
+	return convertPackages(pkgH.packages...)
 }
 
 // GetPackages returns the package identified by url or a new package if
@@ -109,6 +137,7 @@ func (pkgH *PackageHandler) getPackage(url string) Package {
 
 // UpgradeAll packages if needed
 func (pkgH *PackageHandler) UpgradeAll() error {
+	collectionErr := make(InstallError)
 	for _, pkg := range pkgH.packages {
 		// no automatic upgrade if version is pinned to specific semver tag
 		if pkg.Version != latest && pkg.Version != master {
@@ -117,38 +146,10 @@ func (pkgH *PackageHandler) UpgradeAll() error {
 		}
 		err := pkg.Install()
 		if err != nil {
-			return errors.Wrapf(err, errWrapUpgradingAllPackages)
+			collectionErr.add(pkg, errors.Wrapf(err, "package %v not upgraded", pkg.URL))
 		}
 	}
-	return nil
-}
-
-// InstallError "collects" all errors while installing package(s)
-type InstallError map[Package]error
-
-// Add an error if non-nil
-func (ie InstallError) add(pkg Package, err error) {
-	if err != nil {
-		ie[pkg] = err
-	}
-}
-
-func (ie InstallError) Error() string {
-	s := "Encountered error(s) while installing packages:\n"
-	for pkg, err := range ie {
-		s += fmt.Sprintf("Package %s@%s: %s\n", pkg.URL, pkg.Version, err.Error())
-	}
-
-	return s
-}
-
-// IfNotNil returns a non-nil error if there
-// is any error inside the installError
-func (ie InstallError) IfNotNil() error {
-	for range ie {
-		return ie
-	}
-	return nil
+	return collectionErr.IfNotNil()
 }
 
 // Install the given packages and add them to the
@@ -185,8 +186,7 @@ func (pkgH *PackageHandler) Remove(pkgs ...Package) error {
 	collectionErr := make(InstallError)
 	for _, pkg := range pkgs {
 		idx := pkgH.index(pkg)
-		if pkgH.index(pkg) == packageNotInstalled {
-			//rn errors.Errorf("package %v not installed", pkg.URL)
+		if idx == packageNotInstalled {
 			collectionErr.add(pkg, errors.Errorf("package %v not installed", pkg.URL))
 			continue
 		}
@@ -199,7 +199,7 @@ func (pkgH *PackageHandler) Remove(pkgs ...Package) error {
 
 		pkgH.packages = append(pkgH.packages[:idx], pkgH.packages[idx+1:]...)
 	}
-	return collectionErr
+	return collectionErr.IfNotNil()
 }
 
 // index returns the index of the package or -1 (packageNotInstalled)

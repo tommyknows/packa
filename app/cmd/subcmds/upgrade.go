@@ -16,11 +16,11 @@ func NewCommandUpgrade(pkgH *packages.PackageHandler) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "upgrade [repo-url]",
 		Short: "upgrades packages from given repo",
-		Long: `If no argument is given, all packages that have "latest"
-or "master" set as their versions will be upgraded. Packages pinned to a
-specific version will not be touched.
-
-If a repo-url is given, update the given package to the specified version`,
+		Long: `Upgrade all packages that have "latest"
+or "master" set as their versions. Packages pinned to a
+specific version will not be touched. To update these,
+call "install" with the given package and version you'd
+like to upgrade to.`,
 		Args: cobra.MaximumNArgs(0),
 
 		Run: func(cmd *cobra.Command, args []string) {

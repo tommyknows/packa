@@ -2,7 +2,6 @@ package config
 
 import (
 	"errors"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path"
@@ -94,10 +93,9 @@ func Load(cfgFile string) Configuration {
 	//If a config file is found, read it in.
 	contents, err := ioutil.ReadFile(cfgFile)
 	if err != nil {
-		klog.Infof("Encountered error %v", err)
 		if os.IsNotExist(err) {
 			// returns the default config
-			klog.Infof("returning config %v", cfg)
+			klog.Infof("returning default config as file does not yet exist")
 			return *cfg
 		}
 		klog.Fatalf("error reading config file: %v", err)
@@ -123,25 +121,11 @@ func SaveConfig() error {
 	if cfg == nil {
 		return errors.New("no config to save")
 	}
+	klog.V(3).Infof("Saving config to %v", cfg.filename)
 	y, err := yaml.Marshal(cfg)
 	if err != nil {
 		klog.Fatalf("Error marshaling config to yaml: %v", err)
 	}
-	fmt.Printf("%s", y)
-	fmt.Printf("Directory: %v\n", path.Dir(cfg.filename))
-
-	//_, err = os.Stat(path.Dir(cfg.filename))
-	//if err != nil {
-	//if os.IsNotExist(err) {
-	//err := os.MkdirAll(path.Dir(cfg.filename), 0777)
-	//if err != nil {
-	//klog.Fatalf("could not create directory for config file: %v", err)
-	//}
-	//klog.Infof("Created default config directory at %v", path.Dir(cfg.filename))
-	//} else {
-	//klog.Fatalf("Unknown error: %v", err)
-	//}
-	//}
 
 	err = ioutil.WriteFile(cfg.filename, y, 0644)
 	if err != nil {

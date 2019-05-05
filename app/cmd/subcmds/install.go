@@ -40,7 +40,6 @@ func install(pkgH *packages.PackageHandler, args []string) error {
 		}
 	}()
 
-	pkgs := pkgH.GetPackages(args...)
-	err := pkgH.Install(pkgs...)
+	err := pkgH.Install(pkgH.GetPackages(args...)...)
 	return errors.Wrapf(err, "could not install package(s)")
 }

@@ -42,7 +42,6 @@ func remove(pkgH *packages.PackageHandler, args []string) error {
 		return errors.New("nothing to delete, please specify at least one package to delete")
 	}
 
-	pkgs := pkgH.GetPackages(args...)
-	err := pkgH.Remove(pkgs...)
-	return errors.Wrapf(err, "could not remove some packages")
+	err := pkgH.Remove(pkgH.GetPackages(args...)...)
+	return errors.Wrapf(err, "could not remove package(s)")
 }

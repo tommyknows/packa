@@ -55,23 +55,30 @@ func NewPackage(url string, cmdH CommandHandler) Package {
 
 // Remove binary for a given package
 func (pkg Package) Remove() error {
+	fmt.Printf("Removing Package %v@%v...\n", pkg.URL, pkg.Version)
 	lastIndex := strings.LastIndex(pkg.URL, "/")
 	binaryName := pkg.URL[lastIndex+1:]
-	return pkg.cmdHandler.Remove(binaryName)
+	err := pkg.cmdHandler.Remove(binaryName)
+	if err != nil {
+		return errors.Wrapf(err, "could not remove package")
+	}
+	fmt.Printf("Removed Package %s@%s\n", pkg.URL, pkg.Version)
+	return nil
 }
 
 // Install a given package and set the installed
 // version
 func (pkg Package) Install() error {
 	fmt.Printf("Installing Package %v@%v...\n", pkg.URL, pkg.Version)
-	output, err := pkg.cmdHandler.Install(pkg.URL + "@" + pkg.Version)
+	output, err := pkg.cmdHandler.Install(pkg.URL, pkg.Version)
 	if err != nil {
-		// output already contains newline
-		return fmt.Errorf("%v%v", output, err)
+		return errors.Wrapf(err, "could not install package %v", pkg.URL)
 	}
 
-	// print info at the end
-	defer fmt.Printf("Installed Package %v@%v\n", pkg.URL, pkg.InstalledVersion)
+	// print info at the end, anonymous function to have pkg.InstalledVersion set
+	defer func() {
+		fmt.Printf("Installed Package %s@%s\n", pkg.URL, pkg.InstalledVersion)
+	}()
 
 	version := pkg.getVersion(output)
 	if version != "" {
@@ -112,10 +119,6 @@ func (pkg Package) getVersion(output string) string {
 		split = strings.SplitN(output, "\n", 2)
 		if strings.Contains(split[0], extractPackagePrefix+pkg.URL) {
 			return split[0][strings.LastIndex(split[0], " ")+1:]
-		}
-		// last line
-		if len(split) == 1 {
-			return ""
 		}
 		output = split[1]
 	}

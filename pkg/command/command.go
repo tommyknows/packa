@@ -2,6 +2,7 @@ package command
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"os"
 	"os/exec"
@@ -39,9 +40,39 @@ func WorkingDir(workDir string) func(*Handler) error {
 	}
 }
 
+// InstallError is what is returned
+type InstallError struct {
+	// the actual error from the command
+	err error
+	// the commands output
+	output string
+}
+
+// newInstallError returns an error of type install errror.
+// if the given error was nil, a nil error will be returned
+func newInstallError(output string, err error) error {
+	if err == nil {
+		return nil
+	}
+	return InstallError{
+		err,
+		output,
+	}
+}
+
+// Cause returns the original error
+func (e InstallError) Cause() error {
+	return e.err
+}
+
+func (e InstallError) Error() string {
+	// output normally contains newline already
+	return fmt.Sprintf("%v%v", e.output, e.err)
+}
+
 // Install calls go get to install a package and returns
 // output and exit code
-func (h *Handler) Install(repo string) (string, error) {
+func (h *Handler) Install(repo, version string) (string, error) {
 	// create buffer / writer for command output
 	var b bytes.Buffer
 	var stdoutMW, stderrMW io.Writer
@@ -53,12 +84,12 @@ func (h *Handler) Install(repo string) (string, error) {
 		stderrMW = io.Writer(&b)
 	}
 
-	cmd := exec.Command("go", "get", repo)
+	cmd := exec.Command("go", "get", repo+"@"+version)
 	cmd.Dir = h.workingDir
 	cmd.Stdout = stdoutMW
 	cmd.Stderr = stderrMW
 	err := cmd.Run()
-	return b.String(), err
+	return b.String(), newInstallError(b.String(), err)
 }
 
 // Remove a binary from gopath

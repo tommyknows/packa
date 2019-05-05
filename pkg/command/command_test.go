@@ -8,19 +8,26 @@ import (
 	"path"
 	"testing"
 
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestInstall(t *testing.T) {
+	expectedOutput := `flag provided but not defined: -h@
+usage: go get [-d] [-m] [-u] [-v] [-insecure] [build flags] [packages]
+Run 'go help get' for details.
+`
+	expectedErrMessage := expectedOutput + "exit status 2"
 	cmdH, err := NewHandler()
 	assert.Nil(t, err)
 	cmd := "-h"
-	expectedOutput := `usage: go get [-d] [-m] [-u] [-v] [-insecure] [build flags] [packages]
-Run 'go help get' for details.
-`
-	output, err := cmdH.Install(cmd)
-	assert.NotNil(t, err)
+	output, err := cmdH.Install(cmd, "")
 	assert.Equal(t, expectedOutput, output)
+	_, ok := err.(InstallError)
+	assert.True(t, ok)
+	_, ok = errors.Cause(err).(*exec.ExitError)
+	assert.True(t, ok)
+	assert.Equal(t, expectedErrMessage, err.Error())
 }
 
 func TestWorkingDir(t *testing.T) {
@@ -42,9 +49,10 @@ func TestWorkingDir(t *testing.T) {
 
 	cmdH, err := NewHandler(WorkingDir(dir))
 	assert.Nil(t, err)
-	_, err = cmdH.Install("github.com/thockin/test")
+	_, err = cmdH.Install("github.com/thockin/test", "latest")
 	assert.Nil(t, err)
 
+	// check that the go mod file contains the git repo
 	mod, err := ioutil.ReadFile(path.Join(dir, "go.mod"))
 	assert.Nil(t, err)
 	assert.Contains(t, string(mod), "github.com/thockin/test")

@@ -18,7 +18,10 @@ usage: go get [-d] [-m] [-u] [-v] [-insecure] [build flags] [packages]
 Run 'go help get' for details.
 `
 	expectedErrMessage := expectedOutput + "exit status 2"
-	cmdH, err := NewHandler()
+	tmpWorkDir, err := ioutil.TempDir("", "packa-test")
+	assert.Nil(t, err)
+	defer os.RemoveAll(tmpWorkDir)
+	cmdH, err := NewHandler(WorkingDir(tmpWorkDir))
 	assert.Nil(t, err)
 	cmd := "-h"
 	output, err := cmdH.Install(cmd, "")

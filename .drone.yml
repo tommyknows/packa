@@ -1,0 +1,19 @@
+kind: pipeline
+name: default
+
+workspace:
+  base: /go
+  path: /packa
+
+steps:
+  - name: test
+    image: golang
+    commands:
+      - go get
+      - go test ./... -v -cover
+
+  - name: build
+    image: golang
+    commands:
+      - go get
+      - go build

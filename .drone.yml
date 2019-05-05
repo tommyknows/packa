@@ -5,6 +5,9 @@ workspace:
   base: /go
   path: /packa
 
+environment:
+  GO111MODULE: on
+
 steps:
   - name: test
     image: golang

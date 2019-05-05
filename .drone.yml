@@ -12,11 +12,10 @@ steps:
   - name: test
     image: golang
     commands:
-      - go get
+      - echo $GO111MODULE
       - go test ./... -v -cover
 
   - name: build
     image: golang
     commands:
-      - go get
       - go build

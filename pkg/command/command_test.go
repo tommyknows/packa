@@ -13,17 +13,14 @@ import (
 )
 
 func TestInstall(t *testing.T) {
-	expectedOutput := `flag provided but not defined: -h@
-usage: go get [-d] [-m] [-u] [-v] [-insecure] [build flags] [packages]
-Run 'go help get' for details.
-`
-	expectedErrMessage := expectedOutput + "exit status 2"
+	expectedOutput := "go get test@: invalid module version syntax\n"
+	expectedErrMessage := expectedOutput + "exit status 1"
 	tmpWorkDir, err := ioutil.TempDir("", "packa-test")
 	assert.Nil(t, err)
 	defer os.RemoveAll(tmpWorkDir)
 	cmdH, err := NewHandler(WorkingDir(tmpWorkDir))
 	assert.Nil(t, err)
-	cmd := "-h"
+	cmd := "test"
 	output, err := cmdH.Install(cmd, "")
 	assert.Equal(t, expectedOutput, output)
 	_, ok := err.(InstallError)

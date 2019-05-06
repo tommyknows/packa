@@ -111,7 +111,7 @@ func (pkg Package) UpgradeTo(newVersion string) error {
 }
 
 func (pkg Package) getVersion(output string) string {
-	if !strings.Contains(output, extractPackagePrefix) {
+	if !strings.Contains(output, extractPackagePrefix+pkg.URL) {
 		return ""
 	}
 

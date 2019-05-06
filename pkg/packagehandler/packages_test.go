@@ -77,6 +77,17 @@ func TestGetVersion(t *testing.T) {
 			pkg: Package{
 				&config.Package{
 					URL:     "test.com/no/bla",
+					Version: "v0.0.2",
+				},
+				nil,
+			},
+			output:  "go: getting someth.in/else v0.0.1\ngo: extracting someth.in/else v0.0.1\n",
+			version: "",
+		},
+		{
+			pkg: Package{
+				&config.Package{
+					URL:     "test.com/no/bla",
 					Version: "v0.0.1",
 				},
 				nil,

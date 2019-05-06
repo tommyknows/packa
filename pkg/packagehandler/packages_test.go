@@ -243,7 +243,7 @@ func TestUpgradeTo(t *testing.T) {
 					URL:     "test.com/no/bla",
 					Version: "v0.0.1",
 				},
-				fake.NewCommandHandler("go: extracting test.com/no/bla v0.0.1\n", nil),
+				fake.NewCommandHandler("go: extracting test.com/no/bla v0.0.2\n", nil),
 			},
 			newVersion: "v0.0.2",
 		},
@@ -253,7 +253,8 @@ func TestUpgradeTo(t *testing.T) {
 		t.Run(tt.pkg.URL, func(t *testing.T) {
 			err := tt.pkg.UpgradeTo(tt.newVersion)
 			assert.Equal(t, tt.err, err)
-			assert.Equal(t, tt.pkg.Version, tt.newVersion)
+			assert.Equal(t, tt.newVersion, tt.pkg.Version)
+			assert.Equal(t, tt.newVersion, tt.pkg.Package.InstalledVersion)
 		})
 	}
 

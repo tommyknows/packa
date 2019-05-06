@@ -166,33 +166,6 @@ func TestInstallPackages(t *testing.T) {
 	}
 }
 
-// converts an array of []*config.Package to []Package
-func convert(cfgPkgs []*config.Package, cmdH CommandHandler) []Package {
-	pkgs := []Package{}
-	for _, p := range cfgPkgs {
-		pkgs = append(pkgs, Package{p, cmdH})
-	}
-	return pkgs
-}
-
-// getURL from a list of packages
-func getURL(pkgs []*config.Package) []string {
-	urls := []string{}
-	for _, p := range pkgs {
-		urls = append(urls, p.URL)
-	}
-	return urls
-
-}
-func makeCollError(pkg *config.Package, errMsg string) func(CommandHandler) error {
-	return func(cmdH CommandHandler) error {
-		collErr := make(InstallError)
-		collErr[Package{pkg, cmdH}] = errors.Errorf(errMsg)
-		return collErr
-	}
-
-}
-
 func TestRemove(t *testing.T) {
 	failCmdInit := func() CommandHandler {
 		return fake.NewCommandHandler("no such file or directory\n", fmt.Errorf("exit code 1"))
@@ -275,7 +248,7 @@ func TestUpgradeAll(t *testing.T) {
 		return fake.NewCommandHandler("go: extracting test.com/test/test v0.0.1\n", nil)
 	}
 
-	pkg0 := &config.Package{
+	pkg := &config.Package{
 		URL:     "test.com/test/test",
 		Version: "latest",
 	}
@@ -291,23 +264,24 @@ func TestUpgradeAll(t *testing.T) {
 			name: "sucessful upgrade all",
 			cmdH: successCmdInit(),
 			alreadyInstalled: []*config.Package{
-				pkg0,
+				pkg,
+				// this package should not be upgraded
 				{
 					URL:     "github.com/test/bla",
 					Version: "v0.0.1",
 				},
 			},
 			update: []*config.Package{
-				pkg0,
+				pkg,
 			},
 			err: nil,
 		},
 		{
 			name:             "error upgrade all",
 			cmdH:             failCmdInit(),
-			alreadyInstalled: []*config.Package{pkg0},
-			update:           []*config.Package{pkg0},
-			err:              makeCollError(pkg0, fmt.Sprintf("package %v not upgraded: could not install package %v: exit code 1", pkg0.URL, pkg0.URL)),
+			alreadyInstalled: []*config.Package{pkg},
+			update:           []*config.Package{pkg},
+			err:              makeCollError(pkg, fmt.Sprintf("package %v not upgraded: could not install package %v: exit code 1", pkg.URL, pkg.URL)),
 		},
 	}
 
@@ -333,4 +307,31 @@ func TestUpgradeAll(t *testing.T) {
 			assert.Equal(t, getURL(tt.update), fakeH.InstalledPackages)
 		})
 	}
+}
+
+// converts an array of []*config.Package to []Package
+func convert(cfgPkgs []*config.Package, cmdH CommandHandler) []Package {
+	pkgs := []Package{}
+	for _, p := range cfgPkgs {
+		pkgs = append(pkgs, Package{p, cmdH})
+	}
+	return pkgs
+}
+
+// getURL from a list of packages
+func getURL(pkgs []*config.Package) []string {
+	urls := []string{}
+	for _, p := range pkgs {
+		urls = append(urls, p.URL)
+	}
+	return urls
+
+}
+func makeCollError(pkg *config.Package, errMsg string) func(CommandHandler) error {
+	return func(cmdH CommandHandler) error {
+		collErr := make(InstallError)
+		collErr[Package{pkg, cmdH}] = errors.Errorf(errMsg)
+		return collErr
+	}
+
 }

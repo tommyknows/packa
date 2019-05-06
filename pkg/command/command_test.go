@@ -15,18 +15,23 @@ import (
 func TestInstall(t *testing.T) {
 	expectedOutput := "go get test@: invalid module version syntax\n"
 	expectedErrMessage := expectedOutput + "exit status 1"
+	// create temporary directory
 	tmpWorkDir, err := ioutil.TempDir("", "packa-test")
 	assert.Nil(t, err)
 	defer os.RemoveAll(tmpWorkDir)
+	// create the handler
 	cmdH, err := NewHandler(WorkingDir(tmpWorkDir))
 	assert.Nil(t, err)
+
 	cmd := "test"
 	output, err := cmdH.Install(cmd, "")
 	assert.Equal(t, expectedOutput, output)
 	_, ok := err.(InstallError)
 	assert.True(t, ok)
+
 	_, ok = errors.Cause(err).(*exec.ExitError)
 	assert.True(t, ok)
+
 	assert.Equal(t, expectedErrMessage, err.Error())
 }
 

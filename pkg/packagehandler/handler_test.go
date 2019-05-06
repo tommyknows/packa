@@ -41,21 +41,39 @@ func TestGetPackages(t *testing.T) {
 	}
 
 	tests := []struct {
-		name       string
-		getPackage Package
+		name           string
+		getPackage     []Package
+		receivePackage []Package
 	}{
 		{
 			"package from package list",
-			packages[0],
+			packages,
+			packages,
+		},
+		{
+			"same package twice",
+			[]Package{packages[0], packages[0]},
+			[]Package{packages[0]},
 		},
 		{
 			"non-existent package",
-			Package{
-				&config.Package{
-					URL:     "new.test/new",
-					Version: "latest",
+			[]Package{
+				{
+					&config.Package{
+						URL:     "new.test/new",
+						Version: "latest",
+					},
+					nil,
 				},
-				nil,
+			},
+			[]Package{
+				{
+					&config.Package{
+						URL:     "new.test/new",
+						Version: "latest",
+					},
+					nil,
+				},
 			},
 		},
 	}
@@ -66,8 +84,12 @@ func TestGetPackages(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			pkgs := pkgH.GetPackages(tt.getPackage.URL)
-			assert.Equal(t, pkgs, []Package{tt.getPackage})
+			urls := []string{}
+			for _, p := range tt.getPackage {
+				urls = append(urls, p.URL+"@"+p.Version)
+			}
+			pkgs := pkgH.GetPackages(urls...)
+			assert.Equal(t, tt.receivePackage, pkgs)
 		})
 	}
 }

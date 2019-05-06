@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"git.ramonruettimann.ml/ramon/packa/app/apis/config"
+	"git.ramonruettimann.ml/ramon/packa/pkg/output"
 	"github.com/pkg/errors"
 )
 
@@ -103,13 +104,62 @@ func (pkgH *PackageHandler) ExportPackages() []*config.Package {
 // it did not exist yet
 func (pkgH *PackageHandler) GetPackages(urls ...string) []Package {
 	var pkgs []Package
-	for _, url := range urls {
-		pkgs = append(pkgs, pkgH.getPackage(url))
+	var processedURLs []string
+	for idx, url := range urls {
+		var version string
+		lastIdx := strings.LastIndex(url, "@")
+		// No version is given
+		if lastIdx == -1 {
+			version = latest
+		} else {
+			version = url[lastIdx+1:]
+			url = url[:lastIdx]
+		}
+
+		// check that we don't get the same url twice
+		alreadyProcessed := false
+		if idx != 0 {
+			for _, u := range processedURLs[:idx] {
+				if u == url {
+					alreadyProcessed = true
+					continue
+				}
+			}
+		}
+		if alreadyProcessed {
+			output.Warn("📦 Defined multiple times: %v", url)
+			continue
+		}
+		processedURLs = append(processedURLs, url)
+
+		var found bool
+		for _, p := range pkgH.packages {
+			if p.URL == url {
+				p.Version = version
+				pkgs = append(pkgs, p)
+				found = true
+				continue
+			}
+		}
+		if !found {
+			pkgs = append(pkgs, Package{
+				&config.Package{
+					URL:     url,
+					Version: version,
+				},
+				pkgH.cmdHandler,
+			})
+		}
+
 	}
 
 	return pkgs
 }
 
+// getPackage searches the list of packages in the package handler
+// and returns the package with the same URL. It also sets the version
+// to the given one!
+// if the package is not in the packagehandler, it creates a new package
 func (pkgH *PackageHandler) getPackage(url string) Package {
 	var version string
 	lastIdx := strings.LastIndex(url, "@")
@@ -123,6 +173,7 @@ func (pkgH *PackageHandler) getPackage(url string) Package {
 
 	for _, p := range pkgH.packages {
 		if p.URL == url {
+			p.Version = version
 			return p
 		}
 	}

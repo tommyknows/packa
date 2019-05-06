@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"git.ramonruettimann.ml/ramon/packa/app/apis/config"
+	"git.ramonruettimann.ml/ramon/packa/pkg/output"
 	"github.com/pkg/errors"
 	"k8s.io/klog"
 )
@@ -69,18 +70,18 @@ func (pkg Package) Remove() error {
 // Install a given package and set the installed
 // version
 func (pkg Package) Install() error {
-	fmt.Printf("Installing Package %v@%v...\n", pkg.URL, pkg.Version)
-	output, err := pkg.cmdHandler.Install(pkg.URL, pkg.Version)
+	fmt.Printf("📦 Installing %v@%v...\n", pkg.URL, pkg.Version)
+	cmdOutput, err := pkg.cmdHandler.Install(pkg.URL, pkg.Version)
 	if err != nil {
 		return errors.Wrapf(err, "could not install package %v", pkg.URL)
 	}
 
 	// print info at the end, anonymous function to have pkg.InstalledVersion set
 	defer func() {
-		fmt.Printf("Installed Package %s@%s\n", pkg.URL, pkg.InstalledVersion)
+		output.Success("📦 Installed %s@%s", pkg.URL, pkg.InstalledVersion)
 	}()
 
-	version := pkg.getVersion(output)
+	version := pkg.getVersion(cmdOutput)
 	if version != "" {
 		klog.V(1).Infof("Determined version from output: %v", version)
 		pkg.InstalledVersion = version
@@ -90,7 +91,7 @@ func (pkg Package) Install() error {
 	// we could not get version from go get output...
 	// if the output was empty, it should've been the
 	// version that was specified, i assume
-	if output == "" {
+	if cmdOutput == "" {
 		klog.V(1).Infof("No go get output on installation, setting version %v", pkg.Version)
 		pkg.InstalledVersion = pkg.Version
 		return nil

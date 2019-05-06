@@ -1,13 +1,12 @@
 package subcmds
 
 import (
-	"fmt"
 	"os"
 
 	"git.ramonruettimann.ml/ramon/packa/app/apis/config"
+	"git.ramonruettimann.ml/ramon/packa/pkg/output"
 	packages "git.ramonruettimann.ml/ramon/packa/pkg/packagehandler"
 	"github.com/spf13/cobra"
-	"k8s.io/klog"
 )
 
 // NewCommandUpgrade creates a new instance of the
@@ -26,7 +25,7 @@ like to upgrade to.`,
 		Run: func(cmd *cobra.Command, args []string) {
 			err := upgrade(pkgH, args)
 			if err != nil {
-				fmt.Println(err)
+				output.Error(err.Error())
 				os.Exit(-1)
 			}
 		},
@@ -39,7 +38,7 @@ func upgrade(pkgH *packages.PackageHandler, args []string) error {
 	defer func() {
 		err := config.SavePackages(pkgH.ExportPackages())
 		if err != nil {
-			klog.Fatalf("Could not write package state: %v", err)
+			output.Error("Could not write package state: %v", err)
 		}
 	}()
 

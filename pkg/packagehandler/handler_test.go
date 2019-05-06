@@ -30,28 +30,46 @@ func TestCreateHandler(t *testing.T) {
 }
 
 func TestGetPackages(t *testing.T) {
-	packages := []*config.Package{
+	packages := []Package{
 		{
-			URL:     "test.com/test/test",
-			Version: "v0.0.1",
+			&config.Package{
+				URL:     "test.com/test/test",
+				Version: "v0.0.1",
+			},
+			nil,
 		},
 	}
-	pkgH, err := NewPackageHandler(nil, Handle(packages))
+
+	tests := []struct {
+		name       string
+		getPackage Package
+	}{
+		{
+			"package from package list",
+			packages[0],
+		},
+		{
+			"non-existent package",
+			Package{
+				&config.Package{
+					URL:     "new.test/new",
+					Version: "latest",
+				},
+				nil,
+			},
+		},
+	}
+
+	pkgH, err := NewPackageHandler(nil)
+	pkgH.packages = packages
 	assert.Nil(t, err)
 
-	pkgs := pkgH.GetPackages("test.com/test/test@v0.0.1")
-	assert.Equal(t, pkgs, []Package{Package{packages[0], nil}})
-
-	p := Package{
-		&config.Package{
-			URL:     "new.test/new",
-			Version: "latest",
-		},
-		nil,
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			pkgs := pkgH.GetPackages(tt.getPackage.URL)
+			assert.Equal(t, pkgs, []Package{tt.getPackage})
+		})
 	}
-	pkgs = pkgH.GetPackages(p.URL)
-
-	assert.Equal(t, pkgs, []Package{p})
 }
 
 func TestInstallPackages(t *testing.T) {
@@ -118,17 +136,10 @@ func TestInstallPackages(t *testing.T) {
 			pkgH, err := NewPackageHandler(tt.cmdH, Handle(tt.alreadyInstalled))
 			assert.Nil(t, err)
 
-			err = pkgH.Install(
-				func() []Package {
-					pkgs := []Package{}
-					for _, p := range tt.toInstall {
-						pkgs = append(pkgs, Package{p, pkgH.cmdHandler})
-					}
-					return pkgs
-				}()...,
-			)
-
+			err = pkgH.Install(convert(tt.toInstall, pkgH.cmdHandler)...)
 			if tt.err != nil {
+				// we can't properly compare errors with stacktraces
+				// because of reasons. Thus, compare strings...
 				assert.Equal(t, tt.err(tt.cmdH).Error(), err.Error())
 			} else {
 				if err != nil {
@@ -141,23 +152,45 @@ func TestInstallPackages(t *testing.T) {
 				t.Fatalf("Something's wrong with the fakeHandler!")
 			}
 
+			// the newly added packages should be the ones from toInstall,
+			// unless toInstall does not contain any packages,
+			// which would mean that all alreadyInstalled packages
+			// need to be installed
 			afterInstall := tt.toInstall
 			if len(afterInstall) == 0 {
 				afterInstall = tt.alreadyInstalled
 			}
 
-			assert.Equal(t,
-				func() []string {
-					pkgs := []string{}
-					for _, p := range afterInstall {
-						pkgs = append(pkgs, p.URL)
-					}
-					return pkgs
-				}(),
-				fakeH.InstalledPackages,
-			)
+			assert.Equal(t, getURL(afterInstall), fakeH.InstalledPackages)
 		})
 	}
+}
+
+// converts an array of []*config.Package to []Package
+func convert(cfgPkgs []*config.Package, cmdH CommandHandler) []Package {
+	pkgs := []Package{}
+	for _, p := range cfgPkgs {
+		pkgs = append(pkgs, Package{p, cmdH})
+	}
+	return pkgs
+}
+
+// getURL from a list of packages
+func getURL(pkgs []*config.Package) []string {
+	urls := []string{}
+	for _, p := range pkgs {
+		urls = append(urls, p.URL)
+	}
+	return urls
+
+}
+func makeCollError(pkg *config.Package, errMsg string) func(CommandHandler) error {
+	return func(cmdH CommandHandler) error {
+		collErr := make(InstallError)
+		collErr[Package{pkg, cmdH}] = errors.Errorf(errMsg)
+		return collErr
+	}
+
 }
 
 func TestRemove(t *testing.T) {
@@ -190,11 +223,7 @@ func TestRemove(t *testing.T) {
 			alreadyInstalled: []*config.Package{},
 			toRemove:         pkg,
 			removedBinaries:  []string{},
-			err: func(cmdH CommandHandler) error {
-				collErr := make(InstallError)
-				collErr[Package{pkg[0], cmdH}] = errors.Errorf("package test.com/test/test not installed")
-				return collErr
-			},
+			err:              makeCollError(pkg[0], "package test.com/test/test not installed"),
 		},
 		{
 			name:             "normal removal",
@@ -210,11 +239,7 @@ func TestRemove(t *testing.T) {
 			alreadyInstalled: pkg,
 			toRemove:         pkg,
 			removedBinaries:  []string{"test"},
-			err: func(cmdH CommandHandler) error {
-				collErr := make(InstallError)
-				collErr[Package{pkg[0], cmdH}] = errors.Errorf("error removing binary, not removing package %v from state file: could not remove package: exit code 1", pkg[0].URL)
-				return collErr
-			},
+			err:              makeCollError(pkg[0], fmt.Sprintf("error removing binary, not removing package %v from state file: could not remove package: exit code 1", pkg[0].URL)),
 		},
 	}
 
@@ -223,16 +248,7 @@ func TestRemove(t *testing.T) {
 			pkgH, err := NewPackageHandler(tt.cmdH, Handle(tt.alreadyInstalled))
 			assert.Nil(t, err)
 
-			err = pkgH.Remove(
-				func() []Package {
-					pkgs := []Package{}
-					for _, p := range tt.toRemove {
-						pkgs = append(pkgs, Package{p, pkgH.cmdHandler})
-					}
-					return pkgs
-				}()...,
-			)
-
+			err = pkgH.Remove(convert(tt.toRemove, pkgH.cmdHandler)...)
 			if tt.err != nil {
 				assert.Equal(t, tt.err(tt.cmdH).Error(), err.Error())
 			} else {
@@ -291,11 +307,7 @@ func TestUpgradeAll(t *testing.T) {
 			cmdH:             failCmdInit(),
 			alreadyInstalled: []*config.Package{pkg0},
 			update:           []*config.Package{pkg0},
-			err: func(cmdH CommandHandler) error {
-				collErr := make(InstallError)
-				collErr[Package{pkg0, cmdH}] = errors.Errorf("package %v not upgraded: could not install package %v: exit code 1", pkg0.URL, pkg0.URL)
-				return collErr
-			},
+			err:              makeCollError(pkg0, fmt.Sprintf("package %v not upgraded: could not install package %v: exit code 1", pkg0.URL, pkg0.URL)),
 		},
 	}
 
@@ -318,13 +330,7 @@ func TestUpgradeAll(t *testing.T) {
 				t.Fatalf("Something's wrong with the fakeHandler!")
 			}
 
-			assert.Equal(t, func() []string {
-				updated := []string{}
-				for _, p := range tt.update {
-					updated = append(updated, p.URL)
-				}
-				return updated
-			}(), fakeH.InstalledPackages)
+			assert.Equal(t, getURL(tt.update), fakeH.InstalledPackages)
 		})
 	}
 }

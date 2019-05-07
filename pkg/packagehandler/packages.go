@@ -7,13 +7,11 @@ import (
 	"git.ramonruettimann.ml/ramon/packa/app/apis/config"
 	"git.ramonruettimann.ml/ramon/packa/pkg/output"
 	"github.com/pkg/errors"
-	"k8s.io/klog"
 )
 
 const (
-	latest               = "latest"
-	master               = "master"
-	extractPackagePrefix = "go: extracting "
+	latest = "latest"
+	master = "master"
 	// ErrPackageAlreadyInstalled is returned if a package is already installed
 	ErrPackageAlreadyInstalled   = Error("Package has already been installed")
 	errWrapInstallingAllPackages = "Error installing all packages"
@@ -71,35 +69,13 @@ func (pkg Package) Remove() error {
 // version
 func (pkg Package) Install() error {
 	fmt.Printf("📦 Installing %v@%v...\n", pkg.URL, pkg.Version)
-	cmdOutput, err := pkg.cmdHandler.Install(pkg.URL, pkg.Version)
+	version, err := pkg.cmdHandler.Install(pkg.URL, pkg.Version)
 	if err != nil {
 		return errors.Wrapf(err, "could not install package %v", pkg.URL)
 	}
 
-	// print info at the end, anonymous function to have pkg.InstalledVersion set
-	defer func() {
-		output.Success("📦 Installed %s@%s", pkg.URL, pkg.InstalledVersion)
-	}()
-
-	version := pkg.getVersion(cmdOutput)
-	if version != "" {
-		klog.V(1).Infof("Determined version from output: %v", version)
-		pkg.InstalledVersion = version
-		return nil
-	}
-
-	// we could not get version from go get output...
-	// if the output was empty, it should've been the
-	// version that was specified, i assume
-	if cmdOutput == "" {
-		klog.V(1).Infof("No go get output on installation, setting version %v", pkg.Version)
-		pkg.InstalledVersion = pkg.Version
-		return nil
-	}
-
-	// we want to set something, so guess to specified version
-	klog.V(1).Infof("Setting version as unsure to %v", pkg.Version)
-	pkg.InstalledVersion = "~" + pkg.Version
+	pkg.InstalledVersion = version
+	output.Success("📦 Installed %s@%s", pkg.URL, pkg.InstalledVersion)
 	return nil
 }
 
@@ -108,19 +84,4 @@ func (pkg Package) UpgradeTo(newVersion string) error {
 	pkg.Version = newVersion
 	err := pkg.Install()
 	return errors.Wrapf(err, errWrapUpgradePackageFailed)
-}
-
-func (pkg Package) getVersion(output string) string {
-	if !strings.Contains(output, extractPackagePrefix+pkg.URL) {
-		return ""
-	}
-
-	var split []string
-	for {
-		split = strings.SplitN(output, "\n", 2)
-		if strings.Contains(split[0], extractPackagePrefix+pkg.URL) {
-			return split[0][strings.LastIndex(split[0], " ")+1:]
-		}
-		output = split[1]
-	}
 }

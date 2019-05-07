@@ -7,9 +7,14 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"strings"
 
 	"git.ramonruettimann.ml/ramon/packa/app/apis/defaults"
 	"k8s.io/klog"
+)
+
+const (
+	extractPackagePrefix = "go: extracting "
 )
 
 // Handler executes commands
@@ -72,7 +77,7 @@ func (e InstallError) Error() string {
 
 // Install calls go get to install a package and returns
 // output and exit code
-func (h *Handler) Install(repo, version string) (string, error) {
+func (h *Handler) Install(repo, version string) (extractedVersion string, err error) {
 	// create buffer / writer for command output
 	var b bytes.Buffer
 	var stdoutMW, stderrMW io.Writer
@@ -88,8 +93,41 @@ func (h *Handler) Install(repo, version string) (string, error) {
 	cmd.Dir = h.workingDir
 	cmd.Stdout = stdoutMW
 	cmd.Stderr = stderrMW
-	err := cmd.Run()
-	return b.String(), newInstallError(b.String(), err)
+	err = cmd.Run()
+	output := b.String()
+	if err != nil {
+		return "", newInstallError(output, err)
+	}
+
+	extractedVersion = h.getVersion(repo, output)
+	if extractedVersion != "" {
+		klog.V(1).Infof("Determined version from output: %v", version)
+		return extractedVersion, nil
+	}
+
+	// if the output was empty, it should've been the
+	// version that was specified, i assume
+	if output == "" {
+		klog.V(1).Infof("No go get output on installation, setting version %v", version)
+		return version, nil
+	}
+	klog.V(1).Infof("Setting version as unsure to %v", version)
+	return "~" + version, nil
+}
+
+func (h *Handler) getVersion(repoURL, output string) string {
+	if !strings.Contains(output, extractPackagePrefix+repoURL) {
+		return ""
+	}
+
+	var split []string
+	for {
+		split = strings.SplitN(output, "\n", 2)
+		if strings.Contains(split[0], extractPackagePrefix+repoURL) {
+			return split[0][strings.LastIndex(split[0], " ")+1:]
+		}
+		output = split[1]
+	}
 }
 
 // Remove a binary from gopath

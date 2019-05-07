@@ -13,7 +13,7 @@ import (
 // upgrade command
 func NewCommandUpgrade(pkgH *packages.PackageHandler) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "upgrade [repo-url]",
+		Use:   "upgrade",
 		Short: "upgrades packages from given repo",
 		Long: `Upgrade all packages that have "latest"
 or "master" set as their versions. Packages pinned to a

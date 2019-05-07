@@ -25,7 +25,7 @@ func TestInstall(t *testing.T) {
 
 	cmd := "test"
 	output, err := cmdH.Install(cmd, "")
-	assert.Equal(t, expectedOutput, output)
+	assert.Equal(t, "", output)
 	_, ok := err.(InstallError)
 	assert.True(t, ok)
 
@@ -76,4 +76,42 @@ func TestRemove(t *testing.T) {
 	err = cmdH.Remove(string(b))
 	// RemoveAll should never return an error
 	assert.Nil(t, err)
+}
+
+func TestGetVersion(t *testing.T) {
+	cmdH, err := NewHandler()
+	assert.Nil(t, err)
+	tests := []struct {
+		url     string
+		output  string
+		version string
+	}{
+		{
+			url:     "test.com/no/bla",
+			output:  "go: extracting test.com/no/bla v0.0.1\n",
+			version: "v0.0.1",
+		},
+		{
+			url:     "test.com/no/bla",
+			output:  "go: getting someth.in/else v0.0.1\ngo: extracting someth.in/else v0.0.1\n",
+			version: "",
+		},
+		{
+			url:     "test.com/no/bla",
+			output:  "multiline\ngo: extracting test.com/no/bla v0.0.1\n",
+			version: "v0.0.1",
+		},
+		{
+			url:     "test.com/no/bla",
+			output:  "invalid output\n",
+			version: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.output, func(t *testing.T) {
+			v := cmdH.getVersion(tt.url, tt.output)
+			assert.Equal(t, tt.version, v)
+		})
+	}
 }

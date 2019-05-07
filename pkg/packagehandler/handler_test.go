@@ -22,7 +22,7 @@ func TestCreateHandler(t *testing.T) {
 		},
 	}
 	pkgH, err := NewPackageHandler(
-		fake.NewCommandHandler("", nil),
+		fake.NewCommandHandler("", "", nil),
 		Handle(packages),
 	)
 	assert.Nil(t, err)
@@ -96,10 +96,10 @@ func TestGetPackages(t *testing.T) {
 
 func TestInstallPackages(t *testing.T) {
 	failCmdInit := func() CommandHandler {
-		return fake.NewCommandHandler("error 123\n", fmt.Errorf("exit code 1"))
+		return fake.NewCommandHandler("error 123\n", "", fmt.Errorf("exit code 1"))
 	}
 	successCmdInit := func() CommandHandler {
-		return fake.NewCommandHandler("go: extracting test.com/test/test v0.0.1\n", nil)
+		return fake.NewCommandHandler("go: extracting test.com/test/test v0.0.1\n", "v0.0.1", nil)
 	}
 	pkg := []*config.Package{
 		{
@@ -147,7 +147,7 @@ func TestInstallPackages(t *testing.T) {
 			toInstall:        pkg,
 			err: func(cmdH CommandHandler) error {
 				collErr := make(InstallError)
-				collErr[Package{pkg[0], cmdH}] = errors.Wrapf(fmt.Errorf("exit code 1"), "could not install package %v", pkg[0].URL)
+				collErr[Package{pkg[0], cmdH}] = errors.Wrapf(fmt.Errorf("error 123\nexit code 1"), "could not install package %v", pkg[0].URL)
 				return collErr
 			},
 		},
@@ -190,10 +190,10 @@ func TestInstallPackages(t *testing.T) {
 
 func TestRemove(t *testing.T) {
 	failCmdInit := func() CommandHandler {
-		return fake.NewCommandHandler("no such file or directory\n", fmt.Errorf("exit code 1"))
+		return fake.NewCommandHandler("no such file or directory\n", "", fmt.Errorf("exit code 1"))
 	}
 	successCmdInit := func() CommandHandler {
-		return fake.NewCommandHandler("go: extracting test.com/test/test v0.0.1\n", nil)
+		return fake.NewCommandHandler("go: extracting test.com/test/test v0.0.1\n", "v0.0.1", nil)
 	}
 
 	pkg := []*config.Package{
@@ -264,10 +264,10 @@ func TestRemove(t *testing.T) {
 
 func TestUpgradeAll(t *testing.T) {
 	failCmdInit := func() CommandHandler {
-		return fake.NewCommandHandler("no such file or directory\n", fmt.Errorf("exit code 1"))
+		return fake.NewCommandHandler("no such file or directory\n", "", fmt.Errorf("exit code 1"))
 	}
 	successCmdInit := func() CommandHandler {
-		return fake.NewCommandHandler("go: extracting test.com/test/test v0.0.1\n", nil)
+		return fake.NewCommandHandler("go: extracting test.com/test/test v0.0.1\n", "v0.0.1", nil)
 	}
 
 	pkg := &config.Package{
@@ -303,7 +303,7 @@ func TestUpgradeAll(t *testing.T) {
 			cmdH:             failCmdInit(),
 			alreadyInstalled: []*config.Package{pkg},
 			update:           []*config.Package{pkg},
-			err:              makeCollError(pkg, fmt.Sprintf("package %v not upgraded: could not install package %v: exit code 1", pkg.URL, pkg.URL)),
+			err:              makeCollError(pkg, fmt.Sprintf("package %v not upgraded: could not install package %v: no such file or directory\nexit code 1", pkg.URL, pkg.URL)),
 		},
 	}
 

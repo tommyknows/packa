@@ -56,66 +56,6 @@ func TestNewPackage(t *testing.T) {
 	}
 }
 
-func TestGetVersion(t *testing.T) {
-	tests := []struct {
-		pkg     Package
-		output  string
-		version string
-	}{
-		{
-			pkg: Package{
-				&config.Package{
-					URL:     "test.com/no/bla",
-					Version: "v0.0.1",
-				},
-				nil,
-			},
-			output:  "go: extracting test.com/no/bla v0.0.1\n",
-			version: "v0.0.1",
-		},
-		{
-			pkg: Package{
-				&config.Package{
-					URL:     "test.com/no/bla",
-					Version: "v0.0.2",
-				},
-				nil,
-			},
-			output:  "go: getting someth.in/else v0.0.1\ngo: extracting someth.in/else v0.0.1\n",
-			version: "",
-		},
-		{
-			pkg: Package{
-				&config.Package{
-					URL:     "test.com/no/bla",
-					Version: "v0.0.1",
-				},
-				nil,
-			},
-			output:  "multiline\ngo: extracting test.com/no/bla v0.0.1\n",
-			version: "v0.0.1",
-		},
-		{
-			pkg: Package{
-				&config.Package{
-					URL:     "test.com/no/bla",
-					Version: "v0.0.1",
-				},
-				nil,
-			},
-			output:  "invalid output\n",
-			version: "",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.output, func(t *testing.T) {
-			v := tt.pkg.getVersion(tt.output)
-			assert.Equal(t, tt.version, v)
-		})
-	}
-}
-
 func TestInstallPackage(t *testing.T) {
 	tests := []struct {
 		pkg     Package
@@ -128,7 +68,7 @@ func TestInstallPackage(t *testing.T) {
 					URL:     "test.com/no/bla",
 					Version: "v0.0.1",
 				},
-				fake.NewCommandHandler("go: extracting test.com/no/bla v0.0.1\n", nil),
+				fake.NewCommandHandler("go: extracting test.com/no/bla v0.0.1\n", "v0.0.1", nil),
 			},
 			version: "v0.0.1",
 			err:     nil,
@@ -139,7 +79,7 @@ func TestInstallPackage(t *testing.T) {
 					URL:     "test.com/no/bla",
 					Version: "v0.0.1",
 				},
-				fake.NewCommandHandler("multiline\ngo: extracting test.com/no/bla v0.0.1\n", nil),
+				fake.NewCommandHandler("multiline\ngo: extracting test.com/no/bla v0.0.1\n", "v0.0.1", nil),
 			},
 			version: "v0.0.1",
 			err:     nil,
@@ -150,7 +90,7 @@ func TestInstallPackage(t *testing.T) {
 					URL:     "extracttest ",
 					Version: "v0.0.1",
 				},
-				fake.NewCommandHandler("some\nmultiline\noutput\n", nil),
+				fake.NewCommandHandler("some\nmultiline\noutput\n", "~v0.0.1", nil),
 			},
 			version: "~v0.0.1",
 			err:     nil,
@@ -161,10 +101,10 @@ func TestInstallPackage(t *testing.T) {
 					URL:     "error output",
 					Version: "v0.0.1",
 				},
-				fake.NewCommandHandler("help: error\n", fmt.Errorf("exit 1")),
+				fake.NewCommandHandler("help: error\n", "", fmt.Errorf("exit 1")),
 			},
 			version: "",
-			err:     errors.Wrapf(fmt.Errorf("exit 1"), "could not install package error output"),
+			err:     errors.Wrapf(fmt.Errorf("help: error\nexit 1"), "could not install package error output"),
 		},
 		{
 			pkg: Package{
@@ -172,7 +112,7 @@ func TestInstallPackage(t *testing.T) {
 					URL:     "someurl",
 					Version: "v0.0.1",
 				},
-				fake.NewCommandHandler("", nil),
+				fake.NewCommandHandler("", "v0.0.1", nil),
 			},
 			version: "v0.0.1",
 			err:     nil,
@@ -200,7 +140,7 @@ func TestRemovePackage(t *testing.T) {
 					URL:     "test.com/no/bla",
 					Version: "v0.0.1",
 				},
-				fake.NewCommandHandler("go: extracting test.com/no/bla v0.0.1\n", nil),
+				fake.NewCommandHandler("go: extracting test.com/no/bla v0.0.1\n", "v0.0.1", nil),
 			},
 			binary: "bla",
 			err:    nil,
@@ -211,7 +151,7 @@ func TestRemovePackage(t *testing.T) {
 					URL:     "test.com/no/anotherbinary",
 					Version: "v0.0.1",
 				},
-				fake.NewCommandHandler("multiline\ngo: extracting test.com/no/bla v0.0.1\n", nil),
+				fake.NewCommandHandler("multiline\ngo: extracting test.com/no/bla v0.0.1\n", "", nil),
 			},
 			binary: "anotherbinary",
 			err:    nil,
@@ -222,7 +162,7 @@ func TestRemovePackage(t *testing.T) {
 					URL:     "test.com/name",
 					Version: "v0.0.1",
 				},
-				fake.NewCommandHandler("", fmt.Errorf("exit 1")),
+				fake.NewCommandHandler("", "", fmt.Errorf("exit 1")),
 			},
 			binary: "name",
 			err:    fmt.Errorf("exit 1"),
@@ -254,7 +194,7 @@ func TestUpgradeTo(t *testing.T) {
 					URL:     "test.com/no/bla",
 					Version: "v0.0.1",
 				},
-				fake.NewCommandHandler("go: extracting test.com/no/bla v0.0.2\n", nil),
+				fake.NewCommandHandler("go: extracting test.com/no/bla v0.0.2\n", "v0.0.2", nil),
 			},
 			newVersion: "v0.0.2",
 		},

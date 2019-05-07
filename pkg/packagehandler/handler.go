@@ -162,7 +162,7 @@ func (pkgH *PackageHandler) UpgradeAll() error {
 	for _, pkg := range pkgH.packages {
 		// no automatic upgrade if version is pinned to specific semver tag
 		if pkg.Version != latest && pkg.Version != master {
-			fmt.Printf("Not upgrading %v as pinned to %v\n", pkg.URL, pkg.Version)
+			output.Warn("Not upgrading %v as pinned to %v\n", pkg.URL, pkg.Version)
 			continue
 		}
 		err := pkg.Install()

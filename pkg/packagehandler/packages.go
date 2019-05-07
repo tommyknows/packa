@@ -1,7 +1,6 @@
 package packages
 
 import (
-	"fmt"
 	"strings"
 
 	"git.ramonruettimann.ml/ramon/packa/app/apis/config"
@@ -46,7 +45,6 @@ func NewPackage(url string, cmdH CommandHandler) Package {
 		return pkg
 	}
 
-	fmt.Printf("LastIndex in URL %v: %v\n", url, lastIdx)
 	pkg.Package.URL = url[:lastIdx]
 	pkg.Package.Version = url[lastIdx+1:]
 	return pkg
@@ -54,21 +52,21 @@ func NewPackage(url string, cmdH CommandHandler) Package {
 
 // Remove binary for a given package
 func (pkg Package) Remove() error {
-	fmt.Printf("Removing Package %v@%v...\n", pkg.URL, pkg.Version)
+	output.Info("📦 Removing %v@%v...\n", pkg.URL, pkg.Version)
 	lastIndex := strings.LastIndex(pkg.URL, "/")
 	binaryName := pkg.URL[lastIndex+1:]
 	err := pkg.cmdHandler.Remove(binaryName)
 	if err != nil {
 		return errors.Wrapf(err, "could not remove package")
 	}
-	fmt.Printf("Removed Package %s@%s\n", pkg.URL, pkg.Version)
+	output.Success("📦 Removed %s@%s", pkg.URL, pkg.InstalledVersion)
 	return nil
 }
 
 // Install a given package and set the installed
 // version
 func (pkg Package) Install() error {
-	fmt.Printf("📦 Installing %v@%v...\n", pkg.URL, pkg.Version)
+	output.Info("📦 Installing %v@%v...\n", pkg.URL, pkg.Version)
 	version, err := pkg.cmdHandler.Install(pkg.URL, pkg.Version)
 	if err != nil {
 		return errors.Wrapf(err, "could not install package %v", pkg.URL)

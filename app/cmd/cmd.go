@@ -3,13 +3,13 @@
 package cmd
 
 import (
-	"fmt"
 	"io"
 	"os"
 
 	"git.ramonruettimann.ml/ramon/packa/app/apis/config"
 	"git.ramonruettimann.ml/ramon/packa/app/cmd/subcmds"
 	"git.ramonruettimann.ml/ramon/packa/pkg/command"
+	"git.ramonruettimann.ml/ramon/packa/pkg/output"
 	packages "git.ramonruettimann.ml/ramon/packa/pkg/packagehandler"
 	"github.com/spf13/cobra"
 )
@@ -30,14 +30,14 @@ func NewPackagoCommand(in io.Reader, out, err io.Writer) *cobra.Command {
 
 		cmdHandler, err := command.NewHandler(command.WorkingDir(config.WorkingDir()))
 		if err != nil {
-			fmt.Printf("Error setting up CLI: %v\n", err)
+			output.Error("Error setting up CLI: %v\n", err)
 			os.Exit(-1)
 		}
 
 		pkgHP, err := packages.NewPackageHandler(cmdHandler, packages.Handle(cfg.Packages))
 		pkgH = *pkgHP
 		if err != nil {
-			fmt.Printf("Error setting up CLI: %v\n", err)
+			output.Error("Error setting up CLI: %v\n", err)
 			os.Exit(-1)
 		}
 	})

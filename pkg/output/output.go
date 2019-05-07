@@ -2,6 +2,7 @@ package output
 
 import (
 	"fmt"
+	"os"
 
 	a "github.com/logrusorgru/aurora"
 )
@@ -23,5 +24,5 @@ func Warn(format string, args ...interface{}) {
 
 // Error prints an error
 func Error(format string, args ...interface{}) {
-	fmt.Println(a.Bold(a.Red(fmt.Sprintf(format, args...))))
+	fmt.Fprintf(os.Stderr, a.Bold(a.Red(fmt.Sprintf(format, args...))).String())
 }

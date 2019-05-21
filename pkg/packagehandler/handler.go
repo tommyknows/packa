@@ -3,6 +3,7 @@ package packages
 import (
 	"fmt"
 	"strings"
+	"sync"
 
 	"git.ramonruettimann.ml/ramon/packa/app/apis/config"
 	"git.ramonruettimann.ml/ramon/packa/pkg/output"
@@ -189,37 +190,50 @@ func (pkgH *PackageHandler) Install(pkgs ...Package) error {
 	}
 
 	collectionErr := make(InstallError)
+	// wait for all installs to be completed
+	var wg sync.WaitGroup
 	for _, pkg := range pkgs {
-		err := pkg.Install()
-		if err != nil {
-			collectionErr.add(pkg, err)
-			continue
-		}
-		if !contain && pkgH.index(pkg) == packageNotInstalled {
-			pkgH.packages = append(pkgH.packages, pkg)
-		}
+		wg.Add(1)
+		go func(pkg Package) {
+			defer wg.Done()
+			err := pkg.Install()
+			if err != nil {
+				collectionErr.add(pkg, err)
+				return
+			}
+			if !contain && pkgH.index(pkg) == packageNotInstalled {
+				pkgH.packages = append(pkgH.packages, pkg)
+			}
+		}(pkg)
 	}
+	wg.Wait()
 	return collectionErr.IfNotNil()
 }
 
 // Remove binaries and from the list
 func (pkgH *PackageHandler) Remove(pkgs ...Package) error {
 	collectionErr := make(InstallError)
+	var wg sync.WaitGroup
 	for _, pkg := range pkgs {
-		idx := pkgH.index(pkg)
-		if idx == packageNotInstalled {
-			collectionErr.add(pkg, errors.Errorf("package %v not installed", pkg.URL))
-			continue
-		}
+		wg.Add(1)
+		go func(pkg Package) {
+			defer wg.Done()
+			idx := pkgH.index(pkg)
+			if idx == packageNotInstalled {
+				collectionErr.add(pkg, errors.Errorf("package %v not installed", pkg.URL))
+				return
+			}
 
-		err := pkg.Remove()
-		if err != nil {
-			collectionErr.add(pkg, errors.Wrapf(err, "error removing binary, not removing package %v from state file", pkg.URL))
-			continue
-		}
+			err := pkg.Remove()
+			if err != nil {
+				collectionErr.add(pkg, errors.Wrapf(err, "error removing binary, not removing package %v from state file", pkg.URL))
+				return
+			}
 
-		pkgH.packages = append(pkgH.packages[:idx], pkgH.packages[idx+1:]...)
+			pkgH.packages = append(pkgH.packages[:idx], pkgH.packages[idx+1:]...)
+		}(pkg)
 	}
+	wg.Wait()
 	return collectionErr.IfNotNil()
 }
 

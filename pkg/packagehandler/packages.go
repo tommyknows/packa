@@ -12,10 +12,8 @@ const (
 	latest = "latest"
 	master = "master"
 	// ErrPackageAlreadyInstalled is returned if a package is already installed
-	ErrPackageAlreadyInstalled   = Error("Package has already been installed")
-	errWrapInstallingAllPackages = "Error installing all packages"
-	errWrapUpgradingAllPackages  = "Error upgrading all packages"
-	errWrapUpgradePackageFailed  = "Error upgrading package"
+	ErrPackageAlreadyInstalled  = Error("Package has already been installed")
+	errWrapUpgradePackageFailed = "Error upgrading package"
 )
 
 // Error implements the error type in this package
@@ -59,7 +57,7 @@ func (pkg Package) Remove() error {
 	if err != nil {
 		return errors.Wrapf(err, "could not remove package")
 	}
-	output.Success("📦 Removed %s@%s", pkg.URL, pkg.InstalledVersion)
+	output.Success("📦 Removed %s@%s", pkg.URL, pkg.Version)
 	return nil
 }
 
@@ -72,8 +70,7 @@ func (pkg Package) Install() error {
 		return errors.Wrapf(err, "could not install package %v", pkg.URL)
 	}
 
-	pkg.InstalledVersion = version
-	output.Success("📦 Installed %s@%s", pkg.URL, pkg.InstalledVersion)
+	output.Success("📦 Installed %s@%s", pkg.URL, version)
 	return nil
 }
 

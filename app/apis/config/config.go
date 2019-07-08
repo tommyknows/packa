@@ -45,8 +45,6 @@ type Package struct {
 	URL string `yaml:"URL"`
 	// Which version should be installed (semver, go modules!)
 	Version string `yaml:"Version"`
-	// internal: InstalledVersion
-	InstalledVersion string `yaml:"InstalledVersion,omitempty"`
 }
 
 // AppConfig specifies configuration for the packa application

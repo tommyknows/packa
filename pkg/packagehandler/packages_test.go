@@ -123,7 +123,6 @@ func TestInstallPackage(t *testing.T) {
 		t.Run(tt.pkg.URL, func(t *testing.T) {
 			err := tt.pkg.Install()
 			assert.Equal(t, errors.Cause(tt.err), errors.Cause(err))
-			assert.Equal(t, tt.version, tt.pkg.InstalledVersion)
 		})
 	}
 }
@@ -205,7 +204,6 @@ func TestUpgradeTo(t *testing.T) {
 			err := tt.pkg.UpgradeTo(tt.newVersion)
 			assert.Equal(t, tt.err, err)
 			assert.Equal(t, tt.newVersion, tt.pkg.Version)
-			assert.Equal(t, tt.newVersion, tt.pkg.Package.InstalledVersion)
 		})
 	}
 

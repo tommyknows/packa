@@ -89,7 +89,7 @@ func (h *Handler) Install(repo, version string) (extractedVersion string, err er
 		stderrMW = io.Writer(&b)
 	}
 
-	cmd := exec.Command("go", "get", repo+"@"+version)
+	cmd := exec.Command("go-head", "get", repo+"@"+version)
 	cmd.Dir = h.workingDir
 	cmd.Stdout = stdoutMW
 	cmd.Stderr = stderrMW

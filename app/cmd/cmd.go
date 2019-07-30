@@ -1,5 +1,3 @@
-// Package cmd implements all cobra-command functions for packago
-// This means initialising the main command and parsing the config file
 package cmd
 
 import (

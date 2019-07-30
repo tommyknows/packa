@@ -31,3 +31,7 @@ to write and add packa itself to the initial config file.
 ## Usage
 
 See `packa -h`.
+
+## GoDoc
+
+[![GoDoc](https://godoc.org/git.ramonruettimann.ml/ramon/packa?status.svg)](https://godoc.org/git.ramonruettimann.ml/ramon/packa)

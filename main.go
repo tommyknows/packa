@@ -11,7 +11,8 @@ import (
 func main() {
 	klog.InitFlags(nil)
 	if err := app.Run(); err != nil {
-		output.Error("error: %v\n", err)
+		// this should never happen?
+		output.Error("Something went wrong: %#v", err)
 		os.Exit(1)
 	}
 }

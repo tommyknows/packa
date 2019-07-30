@@ -3,47 +3,76 @@
 package cmd
 
 import (
-	"io"
 	"os"
+	"path"
 
-	"git.ramonruettimann.ml/ramon/packa/app/apis/config"
-	"git.ramonruettimann.ml/ramon/packa/app/cmd/subcmds"
-	"git.ramonruettimann.ml/ramon/packa/pkg/command"
-	"git.ramonruettimann.ml/ramon/packa/pkg/output"
-	packages "git.ramonruettimann.ml/ramon/packa/pkg/packagehandler"
+	"git.ramonruettimann.ml/ramon/packa/app/apis/defaults"
+	"git.ramonruettimann.ml/ramon/packa/app/cmd/subcmd"
+	"git.ramonruettimann.ml/ramon/packa/pkg/controller"
+	"git.ramonruettimann.ml/ramon/packa/pkg/handlers/goget"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+	"k8s.io/klog"
 )
 
-// NewPackagoCommand returns a cobra command with default parameters
-func NewPackagoCommand(in io.Reader, out, err io.Writer) *cobra.Command {
-	var cfg config.Configuration
+// NewPackaCommand returns a cobra command with default parameters
+func NewPackaCommand() *cobra.Command {
 	var cfgFile string
-	var pkgH packages.PackageHandler
+	var ctl *controller.Controller
 	cmd := &cobra.Command{
 		Version: version,
-		Use:     "packago",
-		Short:   "packago is a package manager for go",
+		Use:     "packa",
+		Short:   "packa is a package manager",
 	}
+
 	cmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file location")
-	cobra.OnInitialize(func() {
-		cfg = config.Load(cfgFile)
 
-		cmdHandler, err := command.NewHandler(command.WorkingDir(config.WorkingDir()))
+	// if cfgFile is not defined, get the default config file name
+	if cfgFile == "" {
+		var err error
+		cfgFile, err = createConfigLocation()
 		if err != nil {
-			output.Error("Error setting up CLI: %v\n", err)
-			os.Exit(-1)
+			klog.Fatalf("could not create default config file location: %v", err)
 		}
+	}
 
-		pkgHP, err := packages.NewPackageHandler(cmdHandler, packages.Handle(cfg.Packages))
-		pkgH = *pkgHP
-		if err != nil {
-			output.Error("Error setting up CLI: %v\n", err)
-			os.Exit(-1)
-		}
-	})
-	cmd.AddCommand(subcmds.NewCommandInstall(&pkgH))
-	cmd.AddCommand(subcmds.NewCommandUpgrade(&pkgH))
-	cmd.AddCommand(subcmds.NewCommandRemove(&pkgH))
+	ctl, err := controller.New(
+		controller.ConfigFile(cfgFile),
+		controller.RegisterHandlers(map[string]controller.PackageHandler{
+			"go": goget.New(),
+		}),
+	)
+	if err != nil {
+		klog.Fatalf("could not create controller: %v", err)
+	}
+
+	cmd.AddCommand(subcmd.NewInstallCommand(ctl))
+	cmd.AddCommand(subcmd.NewUpgradeCommand(ctl))
+	cmd.AddCommand(subcmd.NewRemoveCommand(ctl))
+	cmd.AddCommand(subcmd.NewListCommand(ctl))
 
 	return cmd
+}
+
+func createConfigLocation() (string, error) {
+	// if cfgFile is not defined, get the default config file name
+	cfgFile := defaults.ConfigFileFullPath()
+	// create directory if not exists
+	if _, err := os.Stat(path.Dir(cfgFile)); os.IsNotExist(err) {
+		err := os.MkdirAll(path.Dir(cfgFile), 0777)
+		if err != nil {
+			return "", errors.Wrapf(err, "could not create default directory for config file")
+		}
+		klog.Infof("Created default working directory at %v", path.Dir(cfgFile))
+	}
+
+	if _, err := os.Stat(cfgFile); os.IsNotExist(err) {
+		f, err := os.Create(cfgFile)
+		f.Close()
+		if err != nil {
+			return "", errors.Wrapf(err, "could not create empty config file")
+		}
+		klog.Infof("Created empty config file at %v", cfgFile)
+	}
+	return cfgFile, nil
 }

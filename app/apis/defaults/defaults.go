@@ -2,6 +2,7 @@ package defaults
 
 import (
 	"os"
+	"os/user"
 	"path"
 )
 
@@ -12,13 +13,15 @@ const (
 
 // WorkingDir returns the default morking directory
 func WorkingDir() string {
-	return path.Join(os.Getenv("HOME"), packaHiddenDir)
+	usr, _ := user.Current()
+	return path.Join(usr.HomeDir, packaHiddenDir)
 }
 
 // ConfigDir returns the default directory
 // where the config can be found
 func ConfigDir() string {
-	return path.Join(os.Getenv("HOME"), packaHiddenDir)
+	usr, _ := user.Current()
+	return path.Join(usr.HomeDir, packaHiddenDir)
 }
 
 // ConfigFilename retuns the name of the configfile

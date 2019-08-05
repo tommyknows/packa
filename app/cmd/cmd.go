@@ -13,7 +13,8 @@ import (
 	"k8s.io/klog"
 )
 
-// NewPackaCommand returns a cobra command with default parameters
+// NewPackaCommand creates the root packa command, adds all subcommands
+// and initiates the controller
 func NewPackaCommand() *cobra.Command {
 	var cfgFile string
 	var ctl *controller.Controller

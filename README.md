@@ -1,16 +1,20 @@
 # Packa
 
+[![GoDoc](https://godoc.org/git.ramonruettimann.ml/ramon/packa?status.svg)](https://godoc.org/git.ramonruettimann.ml/ramon/packa)
+
 A (meta) package manager with a declarative API.
 Currently supporting the following package managers:
 
 - go (go get)
 
+For adding more managers, see [this](pkg/handlers/README.md)
+
 ## Prerequisites
 
-Make sure to set `GO111MODULE` to `on`.
+A working `go` environment, preferably with the newest version of go (there have
+been various bugs up until at least 1.12.5).
 
-Also, your go version should be as new as possible to work with the goget
-handler, as there have been various bugs up until at least 1.12.5.
+Make sure to set `GO111MODULE` to `on`.
 
 ## Installation
 
@@ -31,7 +35,3 @@ to write and add packa itself to the initial config file.
 ## Usage
 
 See `packa -h`.
-
-## GoDoc
-
-[![GoDoc](https://godoc.org/git.ramonruettimann.ml/ramon/packa?status.svg)](https://godoc.org/git.ramonruettimann.ml/ramon/packa)

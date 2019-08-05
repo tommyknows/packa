@@ -8,9 +8,9 @@ import (
 	"regexp"
 	"strings"
 
-	"git.ramonruettimann.ml/ramon/packa/app/apis/defaults"
 	"git.ramonruettimann.ml/ramon/packa/pkg/cmd"
 	"git.ramonruettimann.ml/ramon/packa/pkg/collection"
+	"git.ramonruettimann.ml/ramon/packa/pkg/defaults"
 	"git.ramonruettimann.ml/ramon/packa/pkg/output"
 	"github.com/pkg/errors"
 	"k8s.io/klog"

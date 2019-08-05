@@ -4,9 +4,9 @@ import (
 	"os"
 	"path"
 
-	"git.ramonruettimann.ml/ramon/packa/app/apis/defaults"
-	"git.ramonruettimann.ml/ramon/packa/app/cmd/subcmd"
+	"git.ramonruettimann.ml/ramon/packa/cmd/subcmd"
 	"git.ramonruettimann.ml/ramon/packa/pkg/controller"
+	"git.ramonruettimann.ml/ramon/packa/pkg/defaults"
 	"git.ramonruettimann.ml/ramon/packa/pkg/handlers/goget"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"

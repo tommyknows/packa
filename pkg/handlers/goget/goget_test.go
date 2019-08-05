@@ -6,8 +6,8 @@ import (
 	"io/ioutil"
 	"testing"
 
-	"git.ramonruettimann.ml/ramon/packa/app/apis/defaults"
 	"git.ramonruettimann.ml/ramon/packa/pkg/collection"
+	"git.ramonruettimann.ml/ramon/packa/pkg/defaults"
 	"github.com/stretchr/testify/assert"
 )
 

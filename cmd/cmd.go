@@ -13,15 +13,15 @@ import (
 	"k8s.io/klog"
 )
 
-// NewPackaCommand creates the root packa command, adds all subcommands
-// and initiates the controller
+// NewPackaCommand returns the root command for packa
 func NewPackaCommand() *cobra.Command {
 	var cfgFile string
 	var ctl *controller.Controller
 	cmd := &cobra.Command{
-		Version: version,
-		Use:     "packa",
-		Short:   "packa is a package manager",
+		Version:      version,
+		Use:          "packa",
+		Short:        "packa is a package manager",
+		SilenceUsage: true,
 	}
 
 	cmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file location")
@@ -29,7 +29,7 @@ func NewPackaCommand() *cobra.Command {
 	// if cfgFile is not defined, get the default config file name
 	if cfgFile == "" {
 		var err error
-		cfgFile, err = createConfigLocation()
+		cfgFile, err = createConfigFile()
 		if err != nil {
 			klog.Fatalf("could not create default config file location: %v", err)
 		}
@@ -53,7 +53,10 @@ func NewPackaCommand() *cobra.Command {
 	return cmd
 }
 
-func createConfigLocation() (string, error) {
+// createConfigFileLocation creates the config file
+// directory and the file itself, if they should not
+// exist already, and then returns the path to the file
+func createConfigFile() (cfgFilePath string, err error) {
 	// if cfgFile is not defined, get the default config file name
 	cfgFile := defaults.ConfigFileFullPath()
 	// create directory if not exists

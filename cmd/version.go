@@ -1,6 +1,7 @@
 package cmd
 
-// This file is overwritten by the pipeline
-// and will set the version. Cobra will automatically
-// parse this variable and create a `--version` argument
-const version = "0.0.0"
+// If we did some kind of official binary release, we could
+// set this version in the pipeline to the actual release
+// version and / or commit id. but we don't, so indicate that
+// people grabbed this from master
+const version = "master"

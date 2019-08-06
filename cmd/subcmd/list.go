@@ -1,10 +1,8 @@
 package subcmd
 
 import (
-	"os"
-
 	"git.ramonruettimann.ml/ramon/packa/pkg/controller"
-	"git.ramonruettimann.ml/ramon/packa/pkg/output"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -15,21 +13,15 @@ func NewListCommand(ctl *controller.Controller) *cobra.Command {
 		Long: `if called with zero arguments, list will output
 a list of all available handlers.
 else, it will print the packages of the specified handler `,
-		Run: func(cmd *cobra.Command, args []string) {
-			//switch len(args) {
-			//case 0, 1:
-			err := ctl.PrintPackages(args[0:]...)
-			if err != nil {
-				output.Error("could not print packages: %v", err)
-			}
-			//default:
-			//output.Error("too many arguments specified (need one at max)")
-			//}
-			err = ctl.Close()
-			if err != nil {
-				output.Error(err.Error())
-				os.Exit(-1)
-			}
+		RunE: func(cmd *cobra.Command, args []string) (err error) {
+			// always try to close the controller, this will save the config
+			// file. if an error occured on closing but we are already returning
+			// a non-nil error, we just log it.
+			// if no err would be returned normally, we overwrite it
+			defer func() {
+				err = close(ctl, err)
+			}()
+			return errors.Wrapf(ctl.PrintPackages(args[0:]...), "could not print packages")
 		},
 	}
 }

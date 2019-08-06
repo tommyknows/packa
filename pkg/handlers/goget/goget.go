@@ -26,11 +26,11 @@ var (
 const goGetDefaultVersion = "latest"
 
 type Handler struct {
-	Config   Configuration
+	Config   configuration
 	Packages []Package
 }
 
-type Configuration struct {
+type configuration struct {
 	// Define in which directory the go get command should be executed
 	WorkingDir string `json:"workingDir"`
 	// If go get should be called with the "-u" flag to update dependencies
@@ -59,33 +59,34 @@ func (goH *Handler) Init(config *json.RawMessage, packages *json.RawMessage) err
 		klog.V(4).Infof("GoGet: unmarshaled config %#v", goH.Config)
 	}
 
-	if packages != nil {
-		err := json.Unmarshal([]byte(*packages), &goH.Packages)
-		if err != nil {
-			return errors.Wrapf(err, "could not parse packages %s", packages)
+	if packages == nil {
+		klog.V(4).Infof("GoGet: no packages defined, adding default package")
+		goH.Packages = []Package{
+			{
+				URL:     "git.ramonruettimann.ml/ramon/packa",
+				Version: "latest",
+			},
 		}
-		klog.V(4).Infof("GoGet: Added package list %v", goH.Packages)
 		return nil
 	}
 
-	klog.V(4).Infof("GoGet: no packages defined, adding default package")
-	goH.Packages = []Package{
-		{
-			URL:     "git.ramonruettimann.ml/ramon/packa",
-			Version: "latest",
-		},
+	err := json.Unmarshal([]byte(*packages), &goH.Packages)
+	if err != nil {
+		return errors.Wrapf(err, "could not parse packages %s", packages)
 	}
+	klog.V(4).Infof("GoGet: Added package list %v", goH.Packages)
 	return nil
 }
 
 // New returns a handler with the default settings. They will be overwritten
 // (if set) on Init()
 func New() *Handler {
-	// the default handler config
 	return &Handler{
-		Config: Configuration{
+		// the default handler config
+		Config: configuration{
 			WorkingDir:         defaults.WorkingDir(),
 			UpdateDependencies: false,
+			PrintCommandOutput: false,
 		},
 	}
 }
@@ -96,14 +97,13 @@ func (goH *Handler) Install(pkgs ...string) (packageList *json.RawMessage, err e
 	return goH.do(goH.install, goH.addToIndex, pkgs...)
 }
 
-// Remove a package from the system by parsing the given name
-// and finding out the binary name. then remove the
-// package from the index
+// Remove a package from the system by parsing the given name and finding out the
+// binary name. then remove the package from the index
 func (goH *Handler) Remove(pkgs ...string) (packageList *json.RawMessage, err error) {
 	return goH.do(goH.remove, goH.removeFromIndex, pkgs...)
 }
 
-// Upgrade a package, if it is in the index. Returns an error if one of the packages
+// Upgrade a package, if it is in the index. Returns an error if a package
 // should not exist in the index, but still processes all other packages
 func (goH *Handler) Upgrade(pkgs ...string) (packageList *json.RawMessage, err error) {
 	return goH.do(goH.upgrade, goH.upgradeIndex, pkgs...)

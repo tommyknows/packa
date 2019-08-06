@@ -36,7 +36,7 @@ func defaultConfig() *Configuration {
 
 // Option for the controller initialisation.
 // Directly supply the configuration. This assumes that all fields
-// are initialised!
+// are at least initialised!
 func Config(cfg *Configuration) option {
 	return func(ctl *Controller) error {
 		ctl.configuration = cfg

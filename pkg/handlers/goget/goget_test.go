@@ -25,55 +25,55 @@ func TestInit(t *testing.T) {
 	tests := map[string]struct {
 		configRaw   json.RawMessage
 		packagesRaw json.RawMessage
-		config      Configuration
+		config      configuration
 		packages    []Package
 		isErr       bool
 	}{
 		"empty": {
 			configRaw:   json.RawMessage(`{}`),
-			config:      Configuration{defaults.WorkingDir(), false, false}, // default value from New() call
+			config:      configuration{defaults.WorkingDir(), false, false}, // default value from New() call
 			packagesRaw: json.RawMessage(`[]`),
 			packages:    []Package{},
 			isErr:       false,
 		},
 		"nil-config": {
 			configRaw:   json.RawMessage(``),
-			config:      Configuration{defaults.WorkingDir(), false, false}, // default value from New() call
+			config:      configuration{defaults.WorkingDir(), false, false}, // default value from New() call
 			packagesRaw: json.RawMessage(`[]`),
 			packages:    []Package{},
 			isErr:       false,
 		},
 		"nil-packages": {
 			configRaw:   json.RawMessage(`{}`),
-			config:      Configuration{defaults.WorkingDir(), false, false}, // default value from New() call
+			config:      configuration{defaults.WorkingDir(), false, false}, // default value from New() call
 			packagesRaw: json.RawMessage(``),
 			packages:    []Package{{"git.ramonruettimann.ml/ramon/packa", "latest"}},
 			isErr:       false,
 		},
 		"configed": {
 			configRaw:   json.RawMessage(`{"workingDir": "/test"}`),
-			config:      Configuration{"/test", false, false},
+			config:      configuration{"/test", false, false},
 			packagesRaw: json.RawMessage(`[]`),
 			packages:    []Package{},
 			isErr:       false,
 		},
 		"defined package": {
 			configRaw:   json.RawMessage(`{"workingDir": "/test"}`),
-			config:      Configuration{"/test", false, false},
+			config:      configuration{"/test", false, false},
 			packagesRaw: json.RawMessage(`[{"url": "github.com/test/test", "version": "latest"}]`),
 			packages:    []Package{{"github.com/test/test", "latest"}},
 			isErr:       false,
 		},
 		"invalid config": {
 			configRaw:   json.RawMessage(`{"workingDir" "/test"}`),
-			config:      Configuration{},
+			config:      configuration{},
 			packagesRaw: json.RawMessage(`[]`),
 			packages:    []Package{},
 			isErr:       true,
 		},
 		"invalid packages": {
 			configRaw:   json.RawMessage(``),
-			config:      Configuration{defaults.WorkingDir(), false, false}, // default value from New() call
+			config:      configuration{defaults.WorkingDir(), false, false}, // default value from New() call
 			packagesRaw: json.RawMessage(`["test":"bla"]`),
 			packages:    []Package{},
 			isErr:       true,

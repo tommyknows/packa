@@ -1,0 +1,10 @@
+packages:
+  go:
+  - url: github.com/tommyknows/packa
+    version: 0.1.0
+settings:
+  handler:
+    go:
+      printCommandOutput: true
+      updateDependencies: false
+      workingDir: ~/.packa

@@ -20,6 +20,9 @@ type Option func(Cmd) error
 // to every cmd.Exec call
 var globalOpts []Option
 
+// AddGlobalOption adds an option to EVERY call
+// to Execute. the caller to Execute can overwrite
+// options, as they are evaluated afterwards.
 func AddGlobalOptions(opts ...Option) {
 	globalOpts = append(globalOpts, opts...)
 }

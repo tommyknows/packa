@@ -12,14 +12,26 @@ import (
 	"github.com/pkg/errors"
 )
 
-type cmd *exec.Cmd
+type Cmd *exec.Cmd
 
-type option func(cmd) error
+type Option func(Cmd) error
+
+// globalOpts define options that will be added
+// to every cmd.Exec call
+var globalOpts []Option
+
+func AddGlobalOptions(opts ...Option) {
+	globalOpts = append(globalOpts, opts...)
+}
+
+func ResetGlobalOptions() {
+	globalOpts = nil
+}
 
 // Execute is a kind-of simplified version of exec.Cmd with functional
 // options.
-func Execute(args []string, opts ...option) (output string, err error) {
-	var c cmd
+func Execute(args []string, opts ...Option) (output string, err error) {
+	var c Cmd
 	if len(args) == 0 {
 		return "", errors.New("no arguments / command given")
 	}
@@ -28,9 +40,14 @@ func Execute(args []string, opts ...option) (output string, err error) {
 	var b bytes.Buffer
 	c.Stdout, c.Stderr = io.Writer(&b), io.Writer(&b)
 
+	for _, opt := range globalOpts {
+		if err := opt(c); err != nil {
+			return "", errors.Wrapf(err, "could not set global option")
+		}
+	}
+
 	for _, opt := range opts {
-		err = opt(c)
-		if err != nil {
+		if err = opt(c); err != nil {
 			return "", errors.Wrapf(err, "could not set option")
 		}
 	}
@@ -41,8 +58,8 @@ func Execute(args []string, opts ...option) (output string, err error) {
 
 // WorkingDir sets the workingDirectory of the command, so
 // in which directory the command will be executed
-func WorkingDir(wd string) option {
-	return func(c cmd) (err error) {
+func WorkingDir(wd string) Option {
+	return func(c Cmd) (err error) {
 		c.Dir, err = expand(wd)
 		return err
 	}
@@ -50,8 +67,8 @@ func WorkingDir(wd string) option {
 
 // DirectPrint prints the output of the command to stdout / stderr
 // if b is true.
-func DirectPrint(b bool) option {
-	return func(c cmd) error {
+func DirectPrint(b bool) Option {
+	return func(c Cmd) error {
 		if b {
 			c.Stdout = io.MultiWriter(c.Stdout, os.Stdout)
 			c.Stderr = io.MultiWriter(c.Stderr, os.Stderr)

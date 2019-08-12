@@ -10,6 +10,22 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestGlobalOpts(t *testing.T) {
+	tmpDir, err := ioutil.TempDir("", "")
+	assert.NoError(t, err)
+	defer os.RemoveAll(tmpDir)
+	AddGlobalOptions(WorkingDir(tmpDir))
+
+	out, err := Execute([]string{"sh", "-c", "'pwd'"})
+	// cannot directly compare output as on MacOS, TempDir returns /var/...,
+	// while the actual directory is reported as /private/var/...
+	assert.True(t, strings.HasSuffix(out, tmpDir+"\n"))
+	assert.NoError(t, err)
+
+	// reset
+	ResetGlobalOptions()
+}
+
 func TestExpand(t *testing.T) {
 	usr, err := user.Current()
 	assert.NoError(t, err)
@@ -46,7 +62,7 @@ func TestExec(t *testing.T) {
 	assert.True(t, strings.HasSuffix(out, tmpDir+"\n"))
 	assert.NoError(t, err)
 
-	out, err = Execute([]string{"false"}, DirectPrint(false))
+	out, err = Execute([]string{"false"})
 	assert.Equal(t, "", out)
 	assert.Error(t, err)
 

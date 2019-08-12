@@ -126,9 +126,8 @@ func (b *Handler) install(f Formula) error {
 	err := f.install(b.Config.PrintCommandOutput)
 	if err != nil {
 		return err
-	} else {
-		output.Success("📦 Brew\t\tInstalled formula %s", f)
 	}
+	output.Success("📦 Brew\t\tInstalled formula %s", f)
 
 	if f.Version == "" {
 		return err
@@ -167,8 +166,12 @@ func (b *Handler) upgrade(f Formula) error {
 
 	output.Info("📦 Brew\t\tUpgrading package %s", f)
 	err := f.upgrade(b.Config.PrintCommandOutput)
-	if err != nil {
+	if err != nil && err != ErrNoUpgradeNeeded {
 		return err
+	}
+	if err == ErrNoUpgradeNeeded {
+		output.Success("📦 Brew\t\tNo upgrade was needed for formula %s", f)
+		err = nil
 	} else {
 		output.Success("📦 Brew\t\tUpgraded Package %s", f)
 	}

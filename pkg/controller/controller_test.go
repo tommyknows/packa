@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/tommyknows/packa/test/fake"
 	"github.com/stretchr/testify/assert"
+	"github.com/tommyknows/packa/test/fake"
 )
 
 func testConfig() *Configuration {
@@ -45,7 +45,7 @@ func TestInstall(t *testing.T) {
 	ctl := &Controller{
 		configuration: testConfig(),
 		handlers: map[string]*handler{
-			"fake": &handler{
+			"fake": {
 				fH, false,
 			},
 		},
@@ -68,7 +68,7 @@ func TestRemove(t *testing.T) {
 	ctl := &Controller{
 		configuration: cfg,
 		handlers: map[string]*handler{
-			"fake": &handler{
+			"fake": {
 				fH, false,
 			},
 		},
@@ -88,7 +88,7 @@ func TestUpgrade(t *testing.T) {
 	ctl := &Controller{
 		configuration: cfg,
 		handlers: map[string]*handler{
-			"fake": &handler{
+			"fake": {
 				fH, false,
 			},
 		},
@@ -111,10 +111,10 @@ func TestUpgradeAll(t *testing.T) {
 	ctl := &Controller{
 		configuration: cfg,
 		handlers: map[string]*handler{
-			"fake": &handler{
+			"fake": {
 				fH1, false,
 			},
-			"fake2": &handler{
+			"fake2": {
 				fH2, false,
 			},
 		},

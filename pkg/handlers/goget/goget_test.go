@@ -285,11 +285,11 @@ func TestHasActions(t *testing.T) {
 	assert.True(t, h.hasURL(p))
 	assert.True(t, h.has(p))
 
-	p.Version = "somethingdifferent"
+	p.Version = "somethingelse"
 	assert.True(t, h.hasURL(p))
 	assert.False(t, h.has(p))
 
-	p.URL = "somethingdifferent"
+	p.URL = "somethingelse"
 	assert.False(t, h.hasURL(p))
 	assert.False(t, h.has(p))
 }

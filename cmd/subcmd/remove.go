@@ -1,9 +1,9 @@
 package subcmd
 
 import (
+	"github.com/spf13/cobra"
 	"github.com/tommyknows/packa/pkg/controller"
 	"github.com/tommyknows/packa/pkg/output"
-	"github.com/spf13/cobra"
 )
 
 func NewRemoveCommand(ctl *controller.Controller) *cobra.Command {

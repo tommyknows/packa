@@ -17,21 +17,21 @@ func Info(format string, args ...interface{}) {
 // aka bold green
 func Success(format string, args ...interface{}) {
 	s := fmt.Sprintf(format+"\n", args...)
-	fmt.Fprintf(os.Stdout, a.Green(s).Bold().String())
+	fmt.Fprint(os.Stdout, a.Green(s).Bold().String())
 }
 
 // Warn prints a string as a warning to the terminal
 // aka bold yellow
 func Warn(format string, args ...interface{}) {
 	s := fmt.Sprintf(format+"\n", args...)
-	fmt.Fprintf(os.Stdout, a.Yellow(s).Bold().String())
+	fmt.Fprint(os.Stdout, a.Yellow(s).Bold().String())
 }
 
 // Error prints an error
 // aka bold red
 func Error(format string, args ...interface{}) {
 	s := fmt.Sprintf(format+"\n", args...)
-	fmt.Fprintf(os.Stderr, a.Red(s).Bold().String())
+	fmt.Fprint(os.Stderr, a.Red(s).Bold().String())
 }
 
 // WithConfirmation prints the supplied message as an info

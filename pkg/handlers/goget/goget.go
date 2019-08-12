@@ -8,11 +8,11 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/pkg/errors"
 	"github.com/tommyknows/packa/pkg/cmd"
 	"github.com/tommyknows/packa/pkg/collection"
 	"github.com/tommyknows/packa/pkg/defaults"
 	"github.com/tommyknows/packa/pkg/output"
-	"github.com/pkg/errors"
 	"k8s.io/klog"
 )
 
@@ -23,8 +23,6 @@ var (
 	majorVersionRegex = regexp.MustCompile(`/v([0-9])`)
 )
 
-const goGetDefaultVersion = "latest"
-
 type Handler struct {
 	Config   configuration
 	Packages []Package
@@ -32,20 +30,24 @@ type Handler struct {
 
 type configuration struct {
 	// Define in which directory the go get command should be executed
-	WorkingDir string `json:"workingDir"`
+	WorkingDir string `json:"workingDir,omitempty"`
 	// If go get should be called with the "-u" flag to update dependencies
-	UpdateDependencies bool `json:"updateDependencies"`
+	UpdateDependencies bool `json:"updateDependencies,omitempty"`
 	// Print the output of the go get command
-	PrintCommandOutput bool `json:"printCommandOutput"`
+	PrintCommandOutput bool `json:"printCommandOutput,omitempty"`
 }
 
 type Package struct {
 	URL     string `json:"url"`
-	Version string `json:"version"`
+	Version string `json:"version,omitempty"`
 }
 
 func (p Package) String() string {
-	return p.URL + "@" + p.Version
+	s := p.URL
+	if p.Version != "" {
+		s += "@" + p.Version
+	}
+	return s
 }
 
 // Init initialises the handler. If the packagelist should be nil, it adds itself
@@ -216,7 +218,7 @@ func (goH *Handler) addToIndex(p Package) {
 
 // remove a package from the index if the URL and version are equal
 func (goH *Handler) removeFromIndex(p Package) {
-	klog.V(6).Infof("GoGet: Removing package %s to index", p)
+	klog.V(6).Infof("GoGet: Removing package %s from index", p)
 	for idx, pkg := range goH.Packages {
 		if pkg == p {
 			goH.Packages = append(goH.Packages[:idx], goH.Packages[idx+1:]...)
@@ -255,7 +257,7 @@ func (goH *Handler) goGet(pkg Package) error {
 	)
 
 	// don't print the output twice if we have verbosity
-	if err != nil && !klog.V(5) {
+	if err != nil && !bool(klog.V(5)) || goH.Config.PrintCommandOutput {
 		output.Warn(out)
 	}
 	return err
@@ -345,7 +347,7 @@ func extractBinaryName(url string) string {
 // it returns go get's defaults "latest"
 func parse(pkg string) (Package, error) {
 	if !strings.Contains(pkg, "@") {
-		return Package{pkg, goGetDefaultVersion}, nil
+		return Package{pkg, ""}, nil
 	}
 	sp := strings.Split(pkg, "@")
 	if len(sp) > 2 {

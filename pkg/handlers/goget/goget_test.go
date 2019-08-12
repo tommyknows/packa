@@ -6,9 +6,9 @@ import (
 	"io/ioutil"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/tommyknows/packa/pkg/collection"
 	"github.com/tommyknows/packa/pkg/defaults"
-	"github.com/stretchr/testify/assert"
 )
 
 func newTestHandler(t *testing.T) *Handler {
@@ -214,7 +214,7 @@ func TestParse(t *testing.T) {
 		},
 		{
 			"github.com/test/test",
-			Package{"github.com/test/test", "latest"},
+			Package{"github.com/test/test", ""},
 			false,
 		},
 		{
@@ -243,14 +243,14 @@ func TestGetPackages(t *testing.T) {
 	pkgs, err = h.getPackages(packages...)
 	assert.NoError(t, err)
 	assert.Equal(t, packages[0], pkgs[0].String())
-	assert.Equal(t, packages[1]+"@latest", pkgs[1].String())
+	assert.Equal(t, packages[1], pkgs[1].String())
 	assert.Equal(t, packages[2], pkgs[2].String())
 
 	packages = append(packages, "invalid@package@url")
 	pkgs, err = h.getPackages(packages...)
 	assert.Error(t, err)
 	assert.Equal(t, packages[0], pkgs[0].String())
-	assert.Equal(t, packages[1]+"@latest", pkgs[1].String())
+	assert.Equal(t, packages[1], pkgs[1].String())
 	assert.Equal(t, packages[2], pkgs[2].String())
 }
 

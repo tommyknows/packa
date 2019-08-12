@@ -1,22 +1,44 @@
-# GoGet
+# Brew
 
 ## Description
 
-GoGet installs Go (Golang) packages by executing `go get`.
+Install formulae through `homebrew`.
 
 ## Settings
 
-The following settings are available for the GoGet handler:
+The following settings are available for the Brew handler:
 | yaml Tag | Type | Description |
-| `workingDir` | String | sets the directory in which the go get command will be executed. must exist |
-| `updateDependencies` | Boolean | If true, execute the go get command with `-u`, updating the dependencies |
+| `taps` | []string | a list of taps which to use as a source for formulae. The handler will automatically cleanup taps that are not listed here |
 | `printCommandOutput` | Boolean | If true, print the go get command's output on the fly |
 
-## Package Definition
+## formula Definition
 
-The package name follows the Go convention with [URL]@[Version]. If no version
-is set, it will use latest.
+formulae are defined through `[tap]/<formulaname>@[version]`. For example:
 
-If packages are pinned to a specific version, the packages will not be upgraded.
-If you want to upgrade pinned packages, use the install command with the new
-version (or just set the version to "latest" anyway if you're as lazy as I am)
+```sh
+# Install formula "vim"
+vim
+
+# Install formula "vim" at version 8.1.0
+vim@8.1.0
+
+# Install formula "vim" from tap "mycool/tap":
+mycool/tap/vim
+
+# Intsall formula "vim" from tap "mycool/tap" at version 8.1.0:
+mycool/tap/vim@8.1.0
+```
+
+If the version has been specified, the formula will be pinned automatically.
+
+If a pinned formula is upgraded (through the `upgrade` command) with a new version,
+the new version will be pinned again.
+If a pinned formula is upgraded with no new version specified, it will be unpinned
+and upgraded.
+
+When upgrading all formulae, pinned ones will not be upgraded.
+
+## Glossary
+
+- Formula in brew is a package
+- Formulae are thus multiple packages

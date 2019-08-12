@@ -12,12 +12,12 @@ import (
 func TestParse(t *testing.T) {
 	tests := []struct {
 		in  string
-		out Package
+		out Formula
 		err bool
 	}{
 		{
 			in: "username/repo/vim",
-			out: Package{
+			out: Formula{
 				Name: "vim",
 				Tap:  "username/repo",
 			},
@@ -25,7 +25,7 @@ func TestParse(t *testing.T) {
 		},
 		{
 			in: "vim@8.1.0",
-			out: Package{
+			out: Formula{
 				Name:    "vim",
 				Version: "8.1.0",
 			},
@@ -33,7 +33,7 @@ func TestParse(t *testing.T) {
 		},
 		{
 			in: "username/repo/vim@8.1.0",
-			out: Package{
+			out: Formula{
 				Name:    "vim",
 				Tap:     "username/repo",
 				Version: "8.1.0",
@@ -42,7 +42,7 @@ func TestParse(t *testing.T) {
 		},
 		{
 			in:  "vim@8@8",
-			out: Package{},
+			out: Formula{},
 			err: true,
 		},
 	}
@@ -58,13 +58,13 @@ func TestParse(t *testing.T) {
 
 func TestInstall(t *testing.T) {
 	b := Handler{
-		Packages: []Package{
+		Formulae: []Formula{
 			{
 				Name: "somepackage",
 			},
 		},
 	}
-	afterInstall := []Package{
+	afterInstall := []Formula{
 		{
 			Name:    "somepackage",
 			Version: "newer",
@@ -102,18 +102,18 @@ func TestInstall(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Contains(t, executedCommands, []string{"brew", "install", "thispackage"})
 	assert.Contains(t, executedCommands, []string{"brew", "install", "this/tap/another@0.0.1"})
-	assert.Contains(t, executedCommands, []string{"brew", "pin", "this/tap/another@0.0.1"})
+	assert.Contains(t, executedCommands, []string{"brew", "pin", "this/tap/another"})
 	assert.Contains(t, executedCommands, []string{"brew", "install", "pkg@version"})
-	assert.Contains(t, executedCommands, []string{"brew", "pin", "pkg@version"})
+	assert.Contains(t, executedCommands, []string{"brew", "pin", "pkg"})
 	assert.Contains(t, executedCommands, []string{"brew", "install", "from/tap/betterpkg"})
 	assert.Contains(t, executedCommands, []string{"brew", "install", "somepackage@newer"})
-	assert.Contains(t, executedCommands, []string{"brew", "pin", "somepackage@newer"})
+	assert.Contains(t, executedCommands, []string{"brew", "pin", "somepackage"})
 	assert.Len(t, executedCommands, 8)
 }
 
 func TestRemove(t *testing.T) {
 	b := Handler{
-		Packages: []Package{
+		Formulae: []Formula{
 			{
 				Name:    "somepackage",
 				Version: "newer",
@@ -129,7 +129,7 @@ func TestRemove(t *testing.T) {
 			},
 		},
 	}
-	afterRemove := []Package{
+	afterRemove := []Formula{
 		{Name: "thispackage"},
 		{
 			Name:    "pkg",
@@ -159,7 +159,7 @@ func TestRemove(t *testing.T) {
 
 func TestUpgrade(t *testing.T) {
 	b := Handler{
-		Packages: []Package{
+		Formulae: []Formula{
 			{
 				Name:    "somepackage",
 				Version: "newer",
@@ -175,7 +175,7 @@ func TestUpgrade(t *testing.T) {
 			},
 		},
 	}
-	afterUpgrade := []Package{
+	afterUpgrade := []Formula{
 		{
 			Name:    "somepackage",
 			Version: "evennewer",
@@ -206,12 +206,14 @@ func TestUpgrade(t *testing.T) {
 
 	assert.Equal(t, afterUpJSON, []byte(*list))
 	assert.NoError(t, err)
+	assert.Contains(t, executedCommands, []string{"brew", "unpin", "somepackage"})
 	assert.Contains(t, executedCommands, []string{"brew", "upgrade", "somepackage@evennewer"})
+	assert.Contains(t, executedCommands, []string{"brew", "pin", "somepackage"})
 	assert.Contains(t, executedCommands, []string{"brew", "upgrade", "from/tap/betterpkg"})
-	assert.Len(t, executedCommands, 2)
+	assert.Len(t, executedCommands, 4)
 
 	b = Handler{
-		Packages: []Package{
+		Formulae: []Formula{
 			{
 				Name:    "somepackage",
 				Version: "newer",
@@ -220,7 +222,7 @@ func TestUpgrade(t *testing.T) {
 		},
 	}
 
-	afterUpgrade = []Package{
+	afterUpgrade = []Formula{
 		{
 			Name:    "somepackage",
 			Version: "newer",

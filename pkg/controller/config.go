@@ -13,7 +13,7 @@ type Configuration struct {
 	// Settings for packa and its handlers
 	Settings *Settings `json:"settings"`
 	// all the handlers and their packages
-	Packages map[string]*json.RawMessage `json:"packages"`
+	Packages map[string]*json.RawMessage `json:"packages,omitempty"`
 	// for operations on the config file (save / close)
 	file string
 }

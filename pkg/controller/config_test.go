@@ -48,5 +48,5 @@ settings:
 	// ensure that the contents are equal
 	d, err := ioutil.ReadFile(destFile.Name())
 	assert.NoError(t, err)
-	assert.Equal(t, testCfg, d)
+	assert.Equal(t, string(testCfg), string(d))
 }

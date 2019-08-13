@@ -9,21 +9,21 @@ import (
 
 var defaultTaps = []string{"homebrew/core"}
 
-// Tap contains of a name, and if it should be
+// tap contains of a name, and if it should be
 // cloned fully or shallow (see `brew tap -h` for
 // further info)
-type Tap struct {
+type tap struct {
 	Name string `json:"name;omitempty"`
 	Full bool   `json:"full"`
 }
 
-func (t Tap) String() string {
+func (t tap) String() string {
 	return t.Name
 }
 
-type Taps []Tap
+type taps []tap
 
-func (t Taps) names() (names []string) {
+func (t taps) names() (names []string) {
 	for _, tap := range t {
 		names = append(names, tap.Name)
 	}
@@ -52,7 +52,7 @@ func getInstalledTaps() (taps []string, err error) {
 	return rt, nil
 }
 
-func (t Tap) install() error {
+func (t tap) install() error {
 	c := []string{"brew", "tap", t.Name}
 	if t.Full {
 		c = append(c, "--full")
@@ -61,7 +61,7 @@ func (t Tap) install() error {
 	return errors.Wrapf(err, "could not install tap %s", t)
 }
 
-func (t Tap) remove() error {
+func (t tap) remove() error {
 	_, err := cmd.Execute([]string{"brew", "untap", t.Name})
 	return errors.Wrapf(err, "could not remove tap %s", t)
 }
@@ -69,7 +69,7 @@ func (t Tap) remove() error {
 // sync taps, meaning install taps that are defined in
 // Taps but not installed, and remove taps that are installed
 // but not defined in Taps
-func (t Taps) sync() error {
+func (t taps) sync() error {
 	installedTaps, err := getInstalledTaps()
 	if err != nil {
 		return errors.Wrap(err, "could not get list of installed taps")
@@ -78,13 +78,13 @@ func (t Taps) sync() error {
 	missing, spare := filterTaps(installedTaps, t.names())
 
 	for _, m := range missing {
-		if err := t.Tap(m).install(); err != nil {
+		if err := t.tap(m).install(); err != nil {
 			return errors.Wrap(err, "could not install missing tap")
 		}
 	}
 
 	for _, s := range spare {
-		err := Tap{Name: s}.remove()
+		err := tap{Name: s}.remove()
 		if err != nil {
 			return errors.Wrap(err, "could not remove spare tap")
 		}
@@ -92,15 +92,15 @@ func (t Taps) sync() error {
 	return nil
 }
 
-// Tap returns the tap as defined in Taps, or,
+// tap returns the tap as defined in Taps, or,
 // if it should not exist, a new tap
-func (t Taps) Tap(name string) Tap {
+func (t taps) tap(name string) tap {
 	for _, tap := range t {
 		if tap.Name == name {
 			return tap
 		}
 	}
-	return Tap{Name: name}
+	return tap{Name: name}
 }
 
 func filterTaps(installedTaps, desiredTaps []string) (missingTaps, spareTaps []string) {

@@ -12,6 +12,7 @@ The following settings are available for the Brew handler:
 |----------|------|-------------|
 | `taps` | []string | a list of taps which to use as a source for formulae. The handler will automatically cleanup taps that are not listed here |
 | `printCommandOutput` | Boolean | If true, print the go get command's output on the fly |
+| `updateOnInit` | Boolean | If true, runs `brew update` when initialising the handler |
 
 ## Formula Definition
 

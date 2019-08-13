@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 
 	"github.com/pkg/errors"
+	"github.com/tommyknows/packa/pkg/cmd"
 	"github.com/tommyknows/packa/pkg/collection"
 	"github.com/tommyknows/packa/pkg/output"
 	"k8s.io/klog"
@@ -26,6 +27,7 @@ type configuration struct {
 	// Defines a list of additional taps to install
 	Taps               Taps `json:"taps;omitempty"`
 	PrintCommandOutput bool `json:"printCommandOutput;omitempty"`
+	UpdateOnInit       bool `json:"updateOnInit;omitempty"`
 }
 
 // Init initialises the handler.
@@ -46,7 +48,12 @@ func (b *Handler) Init(config *json.RawMessage, formulae *json.RawMessage) error
 		klog.V(4).Infof("Brew: Added formulae list %v", b.Formulae)
 	}
 
-	// TODO: should we run `brew update` here?
+	if b.Config.UpdateOnInit {
+		if err := updateBrew(); err != nil {
+			return errors.Wrapf(err, "auto-update failed")
+		}
+	}
+
 	err := b.Config.Taps.sync()
 	return err
 }
@@ -260,4 +267,9 @@ func (b *Handler) getFormulae(forms ...string) (Formulae, error) {
 		formulae = append(formulae, p)
 	}
 	return formulae, e.IfNotEmpty()
+}
+
+func updateBrew() error {
+	_, err := cmd.Execute([]string{"brew", "update"})
+	return errors.Wrapf(err, "could not update brew")
 }

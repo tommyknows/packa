@@ -10,7 +10,7 @@ import (
 	"k8s.io/klog"
 )
 
-var alreadyInstalled = regexp.MustCompile("^Error: (.*?) already installed")
+var alreadyInstalled = regexp.MustCompile("(.*?)Error: (.*?) already installed")
 
 type Formula struct {
 	Name    string `json:"name"`
@@ -62,9 +62,20 @@ func (f Formula) remove(printOutput bool) error {
 }
 
 func (f Formula) upgrade(printOutput bool) error {
-	out, err := brewExec("upgrade", f.String(), printOutput)
-	if alreadyInstalled.MatchString(out) {
-		return ErrNoUpgradeNeeded
+	// code from brewExec, but with additional error handling
+	out, err := cmd.Execute(
+		[]string{"brew", "upgrade", f.String()},
+		cmd.DirectPrint(bool(klog.V(5)) || printOutput),
+	)
+	// only print output if error occured and we have
+	// not printed the output already
+	if err != nil {
+		if alreadyInstalled.MatchString(out) {
+			return ErrNoUpgradeNeeded
+		}
+		if !printOutput && !bool(klog.V(5)) {
+			output.Warn(out)
+		}
 	}
 	return errors.Wrapf(err, "could not upgrade formula %s", f)
 }

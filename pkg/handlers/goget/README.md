@@ -7,7 +7,9 @@ GoGet installs Go (Golang) packages by executing `go get`.
 ## Settings
 
 The following settings are available for the GoGet handler:
+
 | yaml Tag | Type | Description |
+|----------|------|-------------|
 | `workingDir` | String | sets the directory in which the go get command will be executed. must exist |
 | `updateDependencies` | Boolean | If true, execute the go get command with `-u`, updating the dependencies |
 | `printCommandOutput` | Boolean | If true, print the go get command's output on the fly |

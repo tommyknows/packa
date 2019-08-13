@@ -6,6 +6,7 @@ A (meta) package manager with a declarative API.
 Currently supporting the following package managers:
 
 - go (go get)
+- brew
 
 For adding more managers, see [this](pkg/handlers/README.md)
 

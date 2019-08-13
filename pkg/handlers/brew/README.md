@@ -7,13 +7,15 @@ Install formulae through `homebrew`.
 ## Settings
 
 The following settings are available for the Brew handler:
+
 | yaml Tag | Type | Description |
+|----------|------|-------------|
 | `taps` | []string | a list of taps which to use as a source for formulae. The handler will automatically cleanup taps that are not listed here |
 | `printCommandOutput` | Boolean | If true, print the go get command's output on the fly |
 
-## formula Definition
+## Formula Definition
 
-formulae are defined through `[tap]/<formulaname>@[version]`. For example:
+Formulae are defined through `[tap]/<formulaname>@[version]`. For example:
 
 ```sh
 # Install formula "vim"

@@ -22,7 +22,7 @@ type Package struct {
 var DefaultSettings = Config{"tmp"}
 var DefaultPackages = []Package{{"fakePackage1"}, {"fakePackage2"}}
 
-// DefaultSettings for this handler, ready to use
+// DefaultSettingsRaw for this handler, ready to use
 var DefaultSettingsRaw = func() *json.RawMessage {
 	d, _ := json.Marshal(DefaultSettings)
 	msg := json.RawMessage(d)

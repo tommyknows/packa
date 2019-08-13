@@ -4,8 +4,8 @@ import (
 	"flag"
 	"os"
 
-	"github.com/tommyknows/packa/cmd"
 	"github.com/spf13/pflag"
+	"github.com/tommyknows/packa/cmd"
 	"k8s.io/klog"
 )
 

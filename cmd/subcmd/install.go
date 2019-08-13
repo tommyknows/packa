@@ -3,8 +3,8 @@ package subcmd
 import (
 	"errors"
 
-	"github.com/tommyknows/packa/pkg/controller"
 	"github.com/spf13/cobra"
+	"github.com/tommyknows/packa/pkg/controller"
 )
 
 func NewInstallCommand(ctl *controller.Controller) *cobra.Command {

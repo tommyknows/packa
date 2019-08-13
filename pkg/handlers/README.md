@@ -3,6 +3,7 @@
 ## List of currently implemented Handlers
 
 - Go
+- Brew
 
 ## Development
 
@@ -33,6 +34,8 @@ On a successful operation, log accordingly, too:
 ```
 output.Success("📦 [HandlerName]\tUpgraded Package %s", pkg)
 ```
+
+Depending on how long the handler name is, add one or two tabs
 
 ### Errors
 

@@ -1,8 +1,8 @@
 package subcmd
 
 import (
-	"github.com/tommyknows/packa/pkg/controller"
 	"github.com/spf13/cobra"
+	"github.com/tommyknows/packa/pkg/controller"
 )
 
 func NewUpgradeCommand(ctl *controller.Controller) *cobra.Command {

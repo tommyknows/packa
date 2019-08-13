@@ -3,10 +3,10 @@ package controller
 import (
 	"encoding/json"
 
-	"github.com/tommyknows/packa/pkg/collection"
-	"github.com/tommyknows/packa/pkg/output"
 	"github.com/ghodss/yaml"
 	"github.com/pkg/errors"
+	"github.com/tommyknows/packa/pkg/collection"
+	"github.com/tommyknows/packa/pkg/output"
 	"k8s.io/klog"
 )
 
@@ -53,11 +53,11 @@ type PackageHandler interface {
 type handlerOperation func(handler PackageHandler, pkgs ...string) (packageList *json.RawMessage, err error)
 
 // functional-style options
-type option func(*Controller) error
+type Option func(*Controller) error
 
 // New creates a new Controller, ready to use. Uses functional options
 // to set different fields
-func New(opts ...option) (*Controller, error) {
+func New(opts ...Option) (*Controller, error) {
 	ctl := &Controller{
 		configuration: defaultConfig(),
 		handlers:      make(map[string]*handler),
@@ -72,7 +72,7 @@ func New(opts ...option) (*Controller, error) {
 }
 
 // RegisterHandlers registers the given handlers on the controller
-func RegisterHandlers(handlers map[string]PackageHandler) option {
+func RegisterHandlers(handlers map[string]PackageHandler) Option {
 	return func(ctl *Controller) error {
 		for name, h := range handlers {
 			klog.V(2).Infof("Registering handler %v", name)
@@ -150,7 +150,7 @@ func (ctl *Controller) Upgrade(handler string, pkgs ...string) error {
 func (ctl *Controller) UpgradeAll() error {
 	klog.V(2).Infof("Upgrading all packages")
 	var ce collection.Error
-	for name, _ := range ctl.handlers {
+	for name := range ctl.handlers {
 		err := ctl.handlerDo(PackageHandler.Upgrade, name)
 		if err != nil {
 			ce.Add(name, err)

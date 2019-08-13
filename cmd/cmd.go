@@ -4,12 +4,13 @@ import (
 	"os"
 	"path"
 
+	"github.com/pkg/errors"
+	"github.com/spf13/cobra"
 	"github.com/tommyknows/packa/cmd/subcmd"
 	"github.com/tommyknows/packa/pkg/controller"
 	"github.com/tommyknows/packa/pkg/defaults"
+	"github.com/tommyknows/packa/pkg/handlers/brew"
 	"github.com/tommyknows/packa/pkg/handlers/goget"
-	"github.com/pkg/errors"
-	"github.com/spf13/cobra"
 	"k8s.io/klog"
 )
 
@@ -38,7 +39,8 @@ func NewPackaCommand() *cobra.Command {
 	ctl, err := controller.New(
 		controller.ConfigFile(cfgFile),
 		controller.RegisterHandlers(map[string]controller.PackageHandler{
-			"go": goget.New(),
+			"brew": brew.New(),
+			"go":   goget.New(),
 		}),
 	)
 	if err != nil {

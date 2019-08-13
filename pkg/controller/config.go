@@ -37,7 +37,7 @@ func defaultConfig() *Configuration {
 // Option for the controller initialisation.
 // Directly supply the configuration. This assumes that all fields
 // are at least initialised!
-func Config(cfg *Configuration) option {
+func Config(cfg *Configuration) Option {
 	return func(ctl *Controller) error {
 		ctl.configuration = cfg
 		return nil
@@ -46,7 +46,7 @@ func Config(cfg *Configuration) option {
 
 // Option for the controller initialisation.
 // ConfigFile reads in the configuration from the given file location
-func ConfigFile(cfgFile string) option {
+func ConfigFile(cfgFile string) Option {
 	return func(ctl *Controller) error {
 		f, err := os.OpenFile(cfgFile, os.O_RDONLY, os.ModeTemporary)
 		if err != nil {

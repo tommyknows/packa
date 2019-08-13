@@ -43,22 +43,22 @@ func (f Formula) fullname() string {
 
 func (f Formula) unpin() error {
 	_, err := cmd.Execute([]string{"brew", "unpin", f.fullname()})
-	return errors.Wrapf(err, "could not unpin package %v", f)
+	return errors.Wrapf(err, "could not unpin formula %s", f)
 }
 
 func (f Formula) pin() error {
 	_, err := cmd.Execute([]string{"brew", "pin", f.fullname()})
-	return errors.Wrapf(err, "could not pin package %v", f)
+	return errors.Wrapf(err, "could not pin formula %s", f)
 }
 
 func (f Formula) install(printOutput bool) error {
 	_, err := brewExec("install", f.String(), printOutput)
-	return err
+	return errors.Wrapf(err, "could not install formula %s", f)
 }
 
 func (f Formula) remove(printOutput bool) error {
 	_, err := brewExec("remove", f.fullname(), printOutput)
-	return err
+	return errors.Wrapf(err, "could not remove formula %s", f)
 }
 
 func (f Formula) upgrade(printOutput bool) error {
@@ -66,37 +66,40 @@ func (f Formula) upgrade(printOutput bool) error {
 	if alreadyInstalled.MatchString(out) {
 		return ErrNoUpgradeNeeded
 	}
-	return err
+	return errors.Wrapf(err, "could not upgrade formula %s", f)
 }
 
-func brewExec(action, pkg string, printOutput bool) (out string, err error) {
+func brewExec(action, formula string, printOutput bool) (out string, err error) {
 	out, err = cmd.Execute(
-		[]string{"brew", action, pkg},
+		[]string{"brew", action, formula},
 		cmd.DirectPrint(bool(klog.V(5)) || printOutput),
 	)
-	// don't print the output twice if we have verbosity
+	// only print output if error occured and we have
+	// not printed the output already
 	if err != nil && !printOutput && !bool(klog.V(5)) {
 		output.Warn(out)
 	}
-	return out, errors.Wrapf(err, "could not %s %s", action, pkg)
+	return out, errors.Wrapf(err, "could not %s %s", action, formula)
 }
 
-func parse(pkg string) (Formula, error) {
+func parse(formula string) (Formula, error) {
 	var f Formula
-	if strings.Contains(pkg, "@") {
-		v := strings.Split(pkg, "@")
+	// extract the version
+	if strings.Contains(formula, "@") {
+		v := strings.Split(formula, "@")
 		if len(v) > 2 {
-			return f, errors.Errorf("invalid format for a package, too many '@': %v", pkg)
+			return f, errors.Errorf("invalid format for a package, too many '@': %v", formula)
 		}
+		formula = v[0]
 		f.Version = v[1]
-		pkg = v[0]
 	}
 
-	if strings.Contains(pkg, "/") {
-		t := strings.Split(pkg, "/")
+	// extract the tap
+	if strings.Contains(formula, "/") {
+		t := strings.Split(formula, "/")
 		f.Tap = strings.Join(t[:len(t)-1], "/")
-		pkg = t[len(t)-1]
+		formula = t[len(t)-1]
 	}
-	f.Name = pkg
+	f.Name = formula
 	return f, nil
 }

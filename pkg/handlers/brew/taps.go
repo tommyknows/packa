@@ -9,18 +9,19 @@ import (
 
 var defaultTaps = []string{"homebrew/core"}
 
-// Taps is index with the name, because the
-// name is unique anyway, allows for easier
-// access
-type Taps []Tap
-
 // Tap contains of a name, and if it should be
 // cloned fully or shallow (see `brew tap -h` for
-// further help)
+// further info)
 type Tap struct {
 	Name string `json:"name;omitempty"`
 	Full bool   `json:"full"`
 }
+
+func (t Tap) String() string {
+	return t.Name
+}
+
+type Taps []Tap
 
 func (t Taps) names() (names []string) {
 	for _, tap := range t {
@@ -41,7 +42,14 @@ func getInstalledTaps() (taps []string, err error) {
 		list = strings.ReplaceAll(list, dt+"\n", "")
 	}
 	taps = strings.Split(list, "\n")
-	return taps[:len(taps)-1], nil
+	// remove any empty strings or newlines
+	var rt []string
+	for _, t := range taps {
+		if t != "" && t != "\n" {
+			rt = append(rt, t)
+		}
+	}
+	return rt, nil
 }
 
 func (t Tap) install() error {
@@ -50,12 +58,12 @@ func (t Tap) install() error {
 		c = append(c, "--full")
 	}
 	_, err := cmd.Execute(c)
-	return err
+	return errors.Wrapf(err, "could not install tap %s", t)
 }
 
 func (t Tap) remove() error {
 	_, err := cmd.Execute([]string{"brew", "untap", t.Name})
-	return err
+	return errors.Wrapf(err, "could not remove tap %s", t)
 }
 
 // sync taps, meaning install taps that are defined in
@@ -64,26 +72,28 @@ func (t Tap) remove() error {
 func (t Taps) sync() error {
 	installedTaps, err := getInstalledTaps()
 	if err != nil {
-		return err
+		return errors.Wrap(err, "could not get list of installed taps")
 	}
 
 	missing, spare := filterTaps(installedTaps, t.names())
 
 	for _, m := range missing {
 		if err := t.Tap(m).install(); err != nil {
-			return err
+			return errors.Wrap(err, "could not install missing tap")
 		}
 	}
 
 	for _, s := range spare {
 		err := Tap{Name: s}.remove()
 		if err != nil {
-			return err
+			return errors.Wrap(err, "could not remove spare tap")
 		}
 	}
 	return nil
 }
 
+// Tap returns the tap as defined in Taps, or,
+// if it should not exist, a new tap
 func (t Taps) Tap(name string) Tap {
 	for _, tap := range t {
 		if tap.Name == name {

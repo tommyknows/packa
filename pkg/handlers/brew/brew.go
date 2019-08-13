@@ -25,11 +25,10 @@ type Handler struct {
 type configuration struct {
 	// Defines a list of additional taps to install
 	Taps               Taps `json:"taps;omitempty"`
-	PrintCommandOutput bool `json:"printCommandOutput"`
+	PrintCommandOutput bool `json:"printCommandOutput;omitempty"`
 }
 
-// Init initialises the handler. If the packagelist should be nil, it adds itself
-// to that list
+// Init initialises the handler.
 func (b *Handler) Init(config *json.RawMessage, formulae *json.RawMessage) error {
 	if config != nil {
 		err := json.Unmarshal([]byte(*config), &b.Config)
@@ -47,6 +46,7 @@ func (b *Handler) Init(config *json.RawMessage, formulae *json.RawMessage) error
 		klog.V(4).Infof("Brew: Added formulae list %v", b.Formulae)
 	}
 
+	// TODO: should we run `brew update` here?
 	err := b.Config.Taps.sync()
 	return err
 }

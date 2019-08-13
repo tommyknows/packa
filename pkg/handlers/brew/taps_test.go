@@ -1,6 +1,7 @@
 package brew
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -27,8 +28,8 @@ func TestFilterTaps(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run("", func(t *testing.T) {
+	for i, tt := range tests {
+		t.Run(fmt.Sprintf("%v", i), func(t *testing.T) {
 			t.Logf("%v", tt.installedTaps)
 			m, s := filterTaps(tt.installedTaps, tt.desiredTaps)
 			assert.Equal(t, tt.missingTaps, m)
@@ -62,7 +63,8 @@ func TestGetInstalledTaps(t *testing.T) {
 	installedTaps := `homebrew/cask
 this/test
 another/here
-homebrew/core`
+homebrew/core
+`
 	cmd.AddGlobalOptions(fake.NoOp(cmds, installedTaps))
 	defer cmd.ResetGlobalOptions()
 	taps, err := getInstalledTaps()

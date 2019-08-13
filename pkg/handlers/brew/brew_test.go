@@ -1,11 +1,13 @@
 package brew
 
 import (
+	"bytes"
 	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/tommyknows/packa/pkg/cmd"
+	"github.com/tommyknows/packa/pkg/output"
 	"github.com/tommyknows/packa/test/fake"
 )
 
@@ -57,6 +59,10 @@ func TestParse(t *testing.T) {
 }
 
 func TestInstall(t *testing.T) {
+	// redirect the output logs
+	var buf bytes.Buffer
+	output.Set(&buf, &buf)
+	defer buf.Reset()
 	b := Handler{
 		Formulae: []Formula{
 			{
@@ -112,6 +118,10 @@ func TestInstall(t *testing.T) {
 }
 
 func TestRemove(t *testing.T) {
+	// redirect the output logs
+	var buf bytes.Buffer
+	output.Set(&buf, &buf)
+	defer buf.Reset()
 	b := Handler{
 		Formulae: []Formula{
 			{
@@ -158,6 +168,10 @@ func TestRemove(t *testing.T) {
 }
 
 func TestUpgrade(t *testing.T) {
+	// redirect the output logs
+	var buf bytes.Buffer
+	output.Set(&buf, &buf)
+	defer buf.Reset()
 	b := Handler{
 		Formulae: []Formula{
 			{

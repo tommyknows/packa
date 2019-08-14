@@ -14,12 +14,12 @@ import (
 func TestParse(t *testing.T) {
 	tests := []struct {
 		in  string
-		out Formula
+		out formula
 		err bool
 	}{
 		{
 			in: "username/repo/vim",
-			out: Formula{
+			out: formula{
 				Name: "vim",
 				Tap:  "username/repo",
 			},
@@ -27,7 +27,7 @@ func TestParse(t *testing.T) {
 		},
 		{
 			in: "vim@8.1.0",
-			out: Formula{
+			out: formula{
 				Name:    "vim",
 				Version: "8.1.0",
 			},
@@ -35,7 +35,7 @@ func TestParse(t *testing.T) {
 		},
 		{
 			in: "username/repo/vim@8.1.0",
-			out: Formula{
+			out: formula{
 				Name:    "vim",
 				Tap:     "username/repo",
 				Version: "8.1.0",
@@ -44,7 +44,7 @@ func TestParse(t *testing.T) {
 		},
 		{
 			in:  "vim@8@8",
-			out: Formula{},
+			out: formula{},
 			err: true,
 		},
 	}
@@ -64,13 +64,13 @@ func TestInstall(t *testing.T) {
 	output.Set(&buf, &buf)
 	defer buf.Reset()
 	b := Handler{
-		Formulae: []Formula{
+		Formulae: []formula{
 			{
 				Name: "somepackage",
 			},
 		},
 	}
-	afterInstall := []Formula{
+	afterInstall := []formula{
 		{
 			Name:    "somepackage",
 			Version: "newer",
@@ -123,7 +123,7 @@ func TestRemove(t *testing.T) {
 	output.Set(&buf, &buf)
 	defer buf.Reset()
 	b := Handler{
-		Formulae: []Formula{
+		Formulae: []formula{
 			{
 				Name:    "somepackage",
 				Version: "newer",
@@ -139,7 +139,7 @@ func TestRemove(t *testing.T) {
 			},
 		},
 	}
-	afterRemove := []Formula{
+	afterRemove := []formula{
 		{Name: "thispackage"},
 		{
 			Name:    "pkg",
@@ -173,7 +173,7 @@ func TestUpgrade(t *testing.T) {
 	output.Set(&buf, &buf)
 	defer buf.Reset()
 	b := Handler{
-		Formulae: []Formula{
+		Formulae: []formula{
 			{
 				Name:    "somepackage",
 				Version: "newer",
@@ -189,7 +189,7 @@ func TestUpgrade(t *testing.T) {
 			},
 		},
 	}
-	afterUpgrade := []Formula{
+	afterUpgrade := []formula{
 		{
 			Name:    "somepackage",
 			Version: "evennewer",
@@ -227,7 +227,7 @@ func TestUpgrade(t *testing.T) {
 	assert.Len(t, executedCommands, 4)
 
 	b = Handler{
-		Formulae: []Formula{
+		Formulae: []formula{
 			{
 				Name:    "somepackage",
 				Version: "newer",
@@ -236,7 +236,7 @@ func TestUpgrade(t *testing.T) {
 		},
 	}
 
-	afterUpgrade = []Formula{
+	afterUpgrade = []formula{
 		{
 			Name:    "somepackage",
 			Version: "newer",

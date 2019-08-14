@@ -39,7 +39,7 @@ func TestFilterTaps(t *testing.T) {
 }
 
 func TestTapsInstall(t *testing.T) {
-	testTaps := Taps{
+	testTaps := taps{
 		{
 			Name: "my/tap",
 			Full: false,

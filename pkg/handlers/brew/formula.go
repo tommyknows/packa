@@ -12,17 +12,17 @@ import (
 
 var alreadyInstalled = regexp.MustCompile("(.*?)Error: (.*?) already installed")
 
-type Formula struct {
+type formula struct {
 	Name    string `json:"name"`
 	Tap     string `json:"tap,omitempty"`
 	Version string `json:"version,omitempty"`
 }
 
-type Formulae []Formula
+type formulae []formula
 
 // format for printing packages is
 // [tap]/<name>@[version]
-func (f Formula) String() string {
+func (f formula) String() string {
 	var s string
 	if f.Tap != "" {
 		s += f.Tap + "/"
@@ -34,34 +34,34 @@ func (f Formula) String() string {
 	return s
 }
 
-func (f Formula) fullname() string {
+func (f formula) fullname() string {
 	if f.Tap != "" {
 		return f.Tap + "/" + f.Name
 	}
 	return f.Name
 }
 
-func (f Formula) unpin() error {
+func (f formula) unpin() error {
 	_, err := cmd.Execute([]string{"brew", "unpin", f.fullname()})
 	return errors.Wrapf(err, "could not unpin formula %s", f)
 }
 
-func (f Formula) pin() error {
+func (f formula) pin() error {
 	_, err := cmd.Execute([]string{"brew", "pin", f.fullname()})
 	return errors.Wrapf(err, "could not pin formula %s", f)
 }
 
-func (f Formula) install(printOutput bool) error {
+func (f formula) install(printOutput bool) error {
 	_, err := brewExec("install", f.String(), printOutput)
 	return errors.Wrapf(err, "could not install formula %s", f)
 }
 
-func (f Formula) remove(printOutput bool) error {
+func (f formula) remove(printOutput bool) error {
 	_, err := brewExec("remove", f.fullname(), printOutput)
 	return errors.Wrapf(err, "could not remove formula %s", f)
 }
 
-func (f Formula) upgrade(printOutput bool) error {
+func (f formula) upgrade(printOutput bool) error {
 	// code from brewExec, but with additional error handling
 	out, err := cmd.Execute(
 		[]string{"brew", "upgrade", f.String()},
@@ -80,9 +80,9 @@ func (f Formula) upgrade(printOutput bool) error {
 	return errors.Wrapf(err, "could not upgrade formula %s", f)
 }
 
-func brewExec(action, formula string, printOutput bool) (out string, err error) {
+func brewExec(action, form string, printOutput bool) (out string, err error) {
 	out, err = cmd.Execute(
-		[]string{"brew", action, formula},
+		[]string{"brew", action, form},
 		cmd.DirectPrint(bool(klog.V(5)) || printOutput),
 	)
 	// only print output if error occured and we have
@@ -90,27 +90,27 @@ func brewExec(action, formula string, printOutput bool) (out string, err error) 
 	if err != nil && !printOutput && !bool(klog.V(5)) {
 		output.Warn(out)
 	}
-	return out, errors.Wrapf(err, "could not %s %s", action, formula)
+	return out, errors.Wrapf(err, "could not %s %s", action, form)
 }
 
-func parse(formula string) (Formula, error) {
-	var f Formula
+func parse(form string) (formula, error) {
+	var f formula
 	// extract the version
-	if strings.Contains(formula, "@") {
-		v := strings.Split(formula, "@")
+	if strings.Contains(form, "@") {
+		v := strings.Split(form, "@")
 		if len(v) > 2 {
-			return f, errors.Errorf("invalid format for a package, too many '@': %v", formula)
+			return f, errors.Errorf("invalid format for a package, too many '@': %v", form)
 		}
-		formula = v[0]
+		form = v[0]
 		f.Version = v[1]
 	}
 
 	// extract the tap
-	if strings.Contains(formula, "/") {
-		t := strings.Split(formula, "/")
+	if strings.Contains(form, "/") {
+		t := strings.Split(form, "/")
 		f.Tap = strings.Join(t[:len(t)-1], "/")
-		formula = t[len(t)-1]
+		form = t[len(t)-1]
 	}
-	f.Name = formula
+	f.Name = form
 	return f, nil
 }

@@ -20,18 +20,18 @@ func (e errorConst) Error() string {
 
 type Handler struct {
 	Config   configuration
-	Formulae Formulae
+	Formulae formulae
 }
 
 type configuration struct {
 	// Defines a list of additional taps to install
-	Taps               Taps `json:"taps;omitempty"`
+	Taps               taps `json:"taps;omitempty"`
 	PrintCommandOutput bool `json:"printCommandOutput;omitempty"`
 	UpdateOnInit       bool `json:"updateOnInit;omitempty"`
 }
 
 // Init initialises the handler.
-func (b *Handler) Init(config *json.RawMessage, formulae *json.RawMessage) error {
+func (b *Handler) Init(config *json.RawMessage, formulaeList *json.RawMessage) error {
 	if config != nil {
 		err := json.Unmarshal([]byte(*config), &b.Config)
 		if err != nil {
@@ -40,10 +40,10 @@ func (b *Handler) Init(config *json.RawMessage, formulae *json.RawMessage) error
 		klog.V(4).Infof("Brew: unmarshaled config %#v", b.Config)
 	}
 
-	if formulae != nil {
-		err := json.Unmarshal([]byte(*formulae), &b.Formulae)
+	if formulaeList != nil {
+		err := json.Unmarshal([]byte(*formulaeList), &b.Formulae)
 		if err != nil {
-			return errors.Wrapf(err, "could not parse formulae %s", formulae)
+			return errors.Wrapf(err, "could not parse formulae %s", formulaeList)
 		}
 		klog.V(4).Infof("Brew: Added formulae list %v", b.Formulae)
 	}
@@ -88,9 +88,9 @@ func (b *Handler) Upgrade(pkgs ...string) (formulaList *json.RawMessage, err err
 // do the formula action and indexAction for a list of formulae, handling
 // errors and marshaling the index in the end
 // NOTE: this code is more or less exactly the same to the method in the goget-package...
-func (b *Handler) do(formulaAction func(Formula) error, indexAction func(Formula), pkgs ...string) (*json.RawMessage, error) {
+func (b *Handler) do(formulaAction func(formula) error, indexAction func(formula), pkgs ...string) (*json.RawMessage, error) {
 	var pError collection.Error
-	formulae, err := b.getFormulae(pkgs...)
+	forms, err := b.getFormulae(pkgs...)
 	if err != nil {
 		pe, ok := err.(*collection.Error)
 		if !ok {
@@ -105,7 +105,7 @@ func (b *Handler) do(formulaAction func(Formula) error, indexAction func(Formula
 		return nil, errors.New("no formula action defined")
 	}
 
-	for _, p := range formulae {
+	for _, p := range forms {
 		// execute the formulaAction and then the index action, if applicable
 		switch err := formulaAction(p); {
 		case indexAction == nil:
@@ -128,7 +128,7 @@ func (b *Handler) do(formulaAction func(Formula) error, indexAction func(Formula
 	return &msg, pError.IfNotEmpty()
 }
 
-func (b *Handler) install(f Formula) error {
+func (b *Handler) install(f formula) error {
 	output.Info("📦 Brew\t\tInstalling formula %s", f)
 	err := f.install(b.Config.PrintCommandOutput)
 	if err != nil {
@@ -148,7 +148,7 @@ func (b *Handler) install(f Formula) error {
 	return err
 }
 
-func (b *Handler) remove(f Formula) error {
+func (b *Handler) remove(f formula) error {
 	output.Info("📦 Brew\t\tRemoving formula %s", f)
 	err := f.remove(b.Config.PrintCommandOutput)
 	if err == nil {
@@ -157,7 +157,7 @@ func (b *Handler) remove(f Formula) error {
 	return err
 }
 
-func (b *Handler) upgrade(f Formula) error {
+func (b *Handler) upgrade(f formula) error {
 	if definedVersion := b.indexVersion(f); definedVersion != "" {
 		if f.Version == definedVersion {
 			output.Warn("📦 Brew\t\tNot upgrading package because it is pinned: %s", f)
@@ -196,7 +196,7 @@ func (b *Handler) upgrade(f Formula) error {
 }
 
 // returns the version of the package as defined in the index
-func (b *Handler) indexVersion(f Formula) string {
+func (b *Handler) indexVersion(f formula) string {
 	for _, form := range b.Formulae {
 		if form.Name == f.Name &&
 			form.Tap == f.Tap {
@@ -206,7 +206,7 @@ func (b *Handler) indexVersion(f Formula) string {
 	return ""
 }
 
-func (b *Handler) upgradeIndex(f Formula) {
+func (b *Handler) upgradeIndex(f formula) {
 	for _, formula := range b.Formulae {
 		if formula.Name == f.Name &&
 			formula.Tap == f.Tap {
@@ -215,7 +215,7 @@ func (b *Handler) upgradeIndex(f Formula) {
 	}
 }
 
-func (b *Handler) removeFromIndex(f Formula) {
+func (b *Handler) removeFromIndex(f formula) {
 	klog.V(6).Infof("Brew: Removing Package %s from index", f)
 	for idx, pkg := range b.Formulae {
 		if pkg == f {
@@ -227,7 +227,7 @@ func (b *Handler) removeFromIndex(f Formula) {
 	klog.V(6).Infof("Brew: Package %s has not been defined in index", f)
 }
 
-func (b *Handler) addToIndex(f Formula) {
+func (b *Handler) addToIndex(f formula) {
 	klog.V(6).Infof("Brew: Adding package %s to index", f)
 	for idx, pkg := range b.Formulae {
 		if pkg.Name == f.Name && pkg.Tap == f.Tap {
@@ -245,17 +245,17 @@ func (b *Handler) addToIndex(f Formula) {
 // it can return an error for some packages, but always tries to parse
 // all packages. All successfully parsed packages will be added to the
 // slice, all others will be described in the error
-func (b *Handler) getFormulae(forms ...string) (Formulae, error) {
+func (b *Handler) getFormulae(forms ...string) (formulae, error) {
 	var e collection.Error
 	if len(forms) == 0 {
 		klog.V(5).Infof("Brew: No packages defined, using all packages from go handler")
 		// make it safe to modify
-		packages := make(Formulae, len(b.Formulae))
+		packages := make(formulae, len(b.Formulae))
 		copy(packages, b.Formulae)
 		return packages, nil
 	}
 
-	var formulae Formulae
+	var f formulae
 	for _, pkg := range forms {
 		p, err := parse(pkg)
 		if err != nil {
@@ -264,9 +264,9 @@ func (b *Handler) getFormulae(forms ...string) (Formulae, error) {
 			continue
 		}
 		klog.V(6).Infof("Brew: Successfully parsed package %v (%s)", pkg, p)
-		formulae = append(formulae, p)
+		f = append(f, p)
 	}
-	return formulae, e.IfNotEmpty()
+	return f, e.IfNotEmpty()
 }
 
 func updateBrew() error {

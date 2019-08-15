@@ -4,12 +4,14 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/matryer/is"
 	"github.com/tommyknows/packa/pkg/cmd"
 	"github.com/tommyknows/packa/test/fake"
 )
 
 func TestFilterTaps(t *testing.T) {
+	is := is.New(t)
+
 	tests := []struct {
 		installedTaps, desiredTaps []string
 		missingTaps, spareTaps     []string
@@ -32,13 +34,15 @@ func TestFilterTaps(t *testing.T) {
 		t.Run(fmt.Sprintf("%v", i), func(t *testing.T) {
 			t.Logf("%v", tt.installedTaps)
 			m, s := filterTaps(tt.installedTaps, tt.desiredTaps)
-			assert.Equal(t, tt.missingTaps, m)
-			assert.Equal(t, tt.spareTaps, s)
+			is.Equal(tt.missingTaps, m)
+			is.Equal(tt.spareTaps, s)
 		})
 	}
 }
 
 func TestTapsInstall(t *testing.T) {
+	is := is.New(t)
+
 	testTaps := taps{
 		{
 			Name: "my/tap",
@@ -51,14 +55,15 @@ func TestTapsInstall(t *testing.T) {
 	cmd.AddGlobalOptions(fake.NoOp(cmds, "homebrew/cask\nhomebrew/core"))
 	defer cmd.ResetGlobalOptions()
 	err := testTaps.sync()
-
-	assert.NoError(t, err)
-	assert.Equal(t, []string{"brew", "tap"}, <-cmds)
-	assert.Equal(t, []string{"brew", "tap", "my/tap"}, <-cmds)
-	assert.Equal(t, []string{"brew", "untap", "homebrew/cask"}, <-cmds)
+	is.NoErr(err)
+	is.Equal([]string{"brew", "tap"}, <-cmds)                    // first command should be brew tap
+	is.Equal([]string{"brew", "tap", "my/tap"}, <-cmds)          // second command should add the my/tap tap
+	is.Equal([]string{"brew", "untap", "homebrew/cask"}, <-cmds) // third should untap homebrew/cask
 }
 
 func TestGetInstalledTaps(t *testing.T) {
+	is := is.New(t)
+
 	cmds := make(chan []string, 1)
 	installedTaps := `homebrew/cask
 this/test
@@ -68,7 +73,7 @@ homebrew/core
 	cmd.AddGlobalOptions(fake.NoOp(cmds, installedTaps))
 	defer cmd.ResetGlobalOptions()
 	taps, err := getInstalledTaps()
-	assert.NoError(t, err)
-	assert.Equal(t, []string{"homebrew/cask", "this/test", "another/here"}, taps)
-	assert.Equal(t, []string{"brew", "tap"}, <-cmds)
+	is.NoErr(err)
+	is.Equal([]string{"homebrew/cask", "this/test", "another/here"}, taps)
+	is.Equal([]string{"brew", "tap"}, <-cmds)
 }

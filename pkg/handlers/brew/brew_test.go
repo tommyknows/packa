@@ -5,13 +5,15 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/matryer/is"
 	"github.com/tommyknows/packa/pkg/cmd"
 	"github.com/tommyknows/packa/pkg/output"
 	"github.com/tommyknows/packa/test/fake"
 )
 
 func TestParse(t *testing.T) {
+	is := is.New(t)
+
 	tests := []struct {
 		in  string
 		out formula
@@ -52,13 +54,15 @@ func TestParse(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.in, func(t *testing.T) {
 			p, err := parse(tt.in)
-			assert.Equal(t, tt.out, p)
-			assert.Equal(t, tt.err, err != nil)
+			is.Equal(tt.out, p)
+			is.Equal(tt.err, err != nil)
 		})
 	}
 }
 
 func TestInstall(t *testing.T) {
+	is := is.New(t)
+
 	// redirect the output logs
 	var buf bytes.Buffer
 	output.Set(&buf, &buf)
@@ -91,12 +95,14 @@ func TestInstall(t *testing.T) {
 		},
 	}
 	afterInstJSON, err := json.Marshal(afterInstall)
-	assert.NoError(t, err)
+	is.NoErr(err)
 
 	c := make(chan []string, 20)
 	cmd.AddGlobalOptions(fake.NoOp(c, "someoutput"))
 	defer cmd.ResetGlobalOptions()
 	list, err := b.Install("thispackage", "pkg@version", "from/tap/betterpkg", "this/tap/another@0.0.1", "somepackage@newer")
+	is.NoErr(err)
+	is.Equal(afterInstJSON, []byte(*list))
 
 	close(c)
 	var executedCommands [][]string
@@ -104,20 +110,21 @@ func TestInstall(t *testing.T) {
 		executedCommands = append(executedCommands, execedCmd)
 	}
 
-	assert.Equal(t, afterInstJSON, []byte(*list))
-	assert.NoError(t, err)
-	assert.Contains(t, executedCommands, []string{"brew", "install", "thispackage"})
-	assert.Contains(t, executedCommands, []string{"brew", "install", "this/tap/another@0.0.1"})
-	assert.Contains(t, executedCommands, []string{"brew", "pin", "this/tap/another"})
-	assert.Contains(t, executedCommands, []string{"brew", "install", "pkg@version"})
-	assert.Contains(t, executedCommands, []string{"brew", "pin", "pkg"})
-	assert.Contains(t, executedCommands, []string{"brew", "install", "from/tap/betterpkg"})
-	assert.Contains(t, executedCommands, []string{"brew", "install", "somepackage@newer"})
-	assert.Contains(t, executedCommands, []string{"brew", "pin", "somepackage"})
-	assert.Len(t, executedCommands, 8)
+	is.Equal(executedCommands, [][]string{
+		{"brew", "install", "thispackage"},
+		{"brew", "install", "pkg@version"},
+		{"brew", "pin", "pkg"},
+		{"brew", "install", "from/tap/betterpkg"},
+		{"brew", "install", "this/tap/another@0.0.1"},
+		{"brew", "pin", "this/tap/another"},
+		{"brew", "install", "somepackage@newer"},
+		{"brew", "pin", "somepackage"},
+	})
 }
 
 func TestRemove(t *testing.T) {
+	is := is.New(t)
+
 	// redirect the output logs
 	var buf bytes.Buffer
 	output.Set(&buf, &buf)
@@ -147,12 +154,14 @@ func TestRemove(t *testing.T) {
 		},
 	}
 	afterRmJSON, err := json.Marshal(afterRemove)
-	assert.NoError(t, err)
+	is.NoErr(err)
 
 	c := make(chan []string, 20)
 	cmd.AddGlobalOptions(fake.NoOp(c, "someoutput"))
 	defer cmd.ResetGlobalOptions()
 	list, err := b.Remove("somepackage@newer", "from/tap/betterpkg")
+	is.NoErr(err)
+	is.Equal(afterRmJSON, []byte(*list))
 
 	close(c)
 	var executedCommands [][]string
@@ -160,14 +169,15 @@ func TestRemove(t *testing.T) {
 		executedCommands = append(executedCommands, execedCmd)
 	}
 
-	assert.Equal(t, afterRmJSON, []byte(*list))
-	assert.NoError(t, err)
-	assert.Contains(t, executedCommands, []string{"brew", "remove", "somepackage"})
-	assert.Contains(t, executedCommands, []string{"brew", "remove", "from/tap/betterpkg"})
-	assert.Len(t, executedCommands, 2)
+	is.Equal(executedCommands, [][]string{
+		{"brew", "remove", "somepackage"},
+		{"brew", "remove", "from/tap/betterpkg"},
+	})
 }
 
 func TestUpgrade(t *testing.T) {
+	is := is.New(t)
+
 	// redirect the output logs
 	var buf bytes.Buffer
 	output.Set(&buf, &buf)
@@ -205,12 +215,14 @@ func TestUpgrade(t *testing.T) {
 		},
 	}
 	afterUpJSON, err := json.Marshal(afterUpgrade)
-	assert.NoError(t, err)
+	is.NoErr(err)
 
 	c := make(chan []string, 20)
 	cmd.AddGlobalOptions(fake.NoOp(c, "someoutput"))
 	defer cmd.ResetGlobalOptions()
 	list, err := b.Upgrade("somepackage@evennewer", "from/tap/betterpkg")
+	is.NoErr(err)
+	is.Equal(afterUpJSON, []byte(*list))
 
 	close(c)
 	var executedCommands [][]string
@@ -218,13 +230,12 @@ func TestUpgrade(t *testing.T) {
 		executedCommands = append(executedCommands, execedCmd)
 	}
 
-	assert.Equal(t, afterUpJSON, []byte(*list))
-	assert.NoError(t, err)
-	assert.Contains(t, executedCommands, []string{"brew", "unpin", "somepackage"})
-	assert.Contains(t, executedCommands, []string{"brew", "upgrade", "somepackage@evennewer"})
-	assert.Contains(t, executedCommands, []string{"brew", "pin", "somepackage"})
-	assert.Contains(t, executedCommands, []string{"brew", "upgrade", "from/tap/betterpkg"})
-	assert.Len(t, executedCommands, 4)
+	is.Equal(executedCommands, [][]string{
+		{"brew", "unpin", "somepackage"},
+		{"brew", "upgrade", "somepackage@evennewer"},
+		{"brew", "pin", "somepackage"},
+		{"brew", "upgrade", "from/tap/betterpkg"},
+	})
 
 	b = Handler{
 		Formulae: []formula{
@@ -244,13 +255,15 @@ func TestUpgrade(t *testing.T) {
 		{Name: "thispackage"},
 	}
 	afterUpJSON, err = json.Marshal(afterUpgrade)
-	assert.NoError(t, err)
+	is.NoErr(err)
 
 	c = make(chan []string, 20)
 	cmd.ResetGlobalOptions()
 	cmd.AddGlobalOptions(fake.NoOp(c, "someoutput"))
 	defer cmd.ResetGlobalOptions()
 	list, err = b.Upgrade()
+	is.NoErr(err)
+	is.Equal(afterUpJSON, []byte(*list))
 
 	close(c)
 	executedCommands = nil
@@ -258,8 +271,5 @@ func TestUpgrade(t *testing.T) {
 		executedCommands = append(executedCommands, execedCmd)
 	}
 
-	assert.Equal(t, afterUpJSON, []byte(*list))
-	assert.NoError(t, err)
-	assert.Contains(t, executedCommands, []string{"brew", "upgrade", "thispackage"})
-	assert.Len(t, executedCommands, 1)
+	is.Equal(executedCommands, [][]string{{"brew", "upgrade", "thispackage"}})
 }

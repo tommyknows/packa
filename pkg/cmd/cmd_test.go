@@ -7,28 +7,31 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/matryer/is"
 )
 
 func TestGlobalOpts(t *testing.T) {
+	is := is.New(t)
+
 	tmpDir, err := ioutil.TempDir("", "")
-	assert.NoError(t, err)
+	is.NoErr(err) // tempdir creation should not fail
 	defer os.RemoveAll(tmpDir)
 	AddGlobalOptions(WorkingDir(tmpDir))
+	defer ResetGlobalOptions()
 
 	out, err := Execute([]string{"sh", "-c", "'pwd'"})
 	// cannot directly compare output as on MacOS, TempDir returns /var/...,
 	// while the actual directory is reported as /private/var/...
-	assert.True(t, strings.HasSuffix(out, tmpDir+"\n"))
-	assert.NoError(t, err)
-
-	// reset
-	ResetGlobalOptions()
+	is.True(strings.HasSuffix(out, tmpDir+"\n")) // command's output should have the dir name and a newline
+	is.NoErr(err)                                // executing pwd should not fail
 }
 
 func TestExpand(t *testing.T) {
+	is := is.New(t)
+
 	usr, err := user.Current()
-	assert.NoError(t, err)
+	is.NoErr(err) // getting current user should not fail
+
 	tests := []struct {
 		in  string
 		out string
@@ -41,32 +44,34 @@ func TestExpand(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.in, func(t *testing.T) {
 			out, err := expand(tt.in)
-			assert.Equal(t, tt.out, out)
-			assert.Nil(t, err)
+			is.Equal(tt.out, out) // actual output and expected output should be the same
+			is.NoErr(err)         // we don't expect to receive an error in any test
 		})
 	}
 }
 
 func TestExec(t *testing.T) {
+	is := is.New(t)
+
 	out, err := Execute([]string{"echo", "hello world"})
-	assert.Equal(t, "hello world\n", out)
-	assert.NoError(t, err)
+	is.Equal("hello world\n", out) // echo 'hello world' should output hello world
+	is.NoErr(err)                  // echo command should not generate an error
 
 	tmpDir, err := ioutil.TempDir("", "")
-	assert.NoError(t, err)
+	is.NoErr(err) // creating tmpdir should not fail
 	defer os.RemoveAll(tmpDir)
 
 	out, err = Execute([]string{"sh", "-c", "'pwd'"}, WorkingDir(tmpDir))
 	// cannot directly compare output as on MacOS, TempDir returns /var/...,
 	// while the actual directory is reported as /private/var/...
-	assert.True(t, strings.HasSuffix(out, tmpDir+"\n"))
-	assert.NoError(t, err)
+	is.True(strings.HasSuffix(out, tmpDir+"\n")) // command's output should have the dir name and a newline
+	is.NoErr(err)                                // executing pwd should not fail
 
 	out, err = Execute([]string{"false"})
-	assert.Equal(t, "", out)
-	assert.Error(t, err)
+	is.Equal("", out)   // executing `false` should not print anything
+	is.True(err != nil) // error should not be nil
 
 	out, err = Execute([]string{})
-	assert.Equal(t, "", out)
-	assert.Error(t, err)
+	is.Equal("", out)   // not executing any command should output nothing
+	is.True(err != nil) // not giving commands should result in an error
 }

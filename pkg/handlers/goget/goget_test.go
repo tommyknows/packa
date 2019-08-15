@@ -4,24 +4,29 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"strings"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/matryer/is"
 	"github.com/tommyknows/packa/pkg/collection"
 	"github.com/tommyknows/packa/pkg/defaults"
 )
 
 func newTestHandler(t *testing.T) *Handler {
+	is := is.New(t)
+
 	h := New()
 	tmpDir, err := ioutil.TempDir("", "")
-	assert.NoError(t, err)
+	is.NoErr(err)
 	cfg := json.RawMessage(`{"workingDir": "` + tmpDir + `"}`)
 	err = h.Init(&cfg, nil)
-	assert.NoError(t, err)
+	is.NoErr(err)
 	return h
 }
 
 func TestInit(t *testing.T) {
+	is := is.New(t)
+
 	tests := map[string]struct {
 		configRaw   json.RawMessage
 		packagesRaw json.RawMessage
@@ -93,12 +98,12 @@ func TestInit(t *testing.T) {
 			}
 			err := h.Init(cr, pr)
 			if tt.isErr {
-				assert.Error(t, err)
+				is.True(err != nil)
 				return
 			}
-			assert.NoError(t, err)
-			assert.Equal(t, tt.config, h.Config)
-			assert.Equal(t, tt.packages, h.Packages)
+			is.NoErr(err)
+			is.Equal(tt.config, h.Config)
+			is.Equal(tt.packages, h.Packages)
 		})
 	}
 }
@@ -106,6 +111,8 @@ func TestInit(t *testing.T) {
 // TODO: this test should be refactored, I feel like this needs & could
 // be simplified
 func TestDo(t *testing.T) {
+	is := is.New(t)
+
 	pkgCh := make(chan Package)
 	idxCh := make(chan Package)
 	pkgAction := func(returnError bool) func(Package) error {
@@ -125,13 +132,13 @@ func TestDo(t *testing.T) {
 
 	h := newTestHandler(t)
 	rm, err := h.do(nil, nil)
-	assert.Nil(t, rm)
-	assert.Error(t, err)
+	is.True(rm == nil)
+	is.True(err != nil)
 
 	go func() {
 		rm, err = h.do(pkgAction(false), idxAction)
-		assert.NotNil(t, rm)
-		assert.NoError(t, err)
+		is.True(rm != nil)
+		is.NoErr(err)
 		close(idxCh)
 		close(pkgCh)
 	}()
@@ -144,13 +151,13 @@ func TestDo(t *testing.T) {
 				pkgCh = nil
 				continue
 			}
-			assert.Equal(t, h.Packages[0].URL, p.URL)
+			is.Equal(h.Packages[0].URL, p.URL)
 		case p, ok := <-idxCh:
 			if !ok {
 				idxCh = nil
 				continue
 			}
-			assert.Equal(t, h.Packages[0].URL, p.URL)
+			is.Equal(h.Packages[0].URL, p.URL)
 		default:
 			if pkgCh == nil && idxCh == nil {
 				run = false
@@ -163,8 +170,8 @@ func TestDo(t *testing.T) {
 
 	go func() {
 		rm, err = h.do(pkgAction(true), idxAction)
-		assert.NotNil(t, rm)
-		assert.Error(t, err)
+		is.True(rm != nil)
+		is.True(err != nil)
 		close(idxCh)
 		close(pkgCh)
 	}()
@@ -177,13 +184,13 @@ func TestDo(t *testing.T) {
 				pkgCh = nil
 				continue
 			}
-			assert.Equal(t, h.Packages[0].URL, p.URL)
+			is.Equal(h.Packages[0].URL, p.URL)
 		case p, ok := <-idxCh:
 			if !ok {
 				idxCh = nil
 				continue
 			}
-			assert.Equal(t, h.Packages[0].URL, p.URL)
+			is.Equal(h.Packages[0].URL, p.URL)
 		default:
 			if pkgCh == nil && idxCh == nil {
 				run = false
@@ -192,16 +199,18 @@ func TestDo(t *testing.T) {
 	}
 
 	rm, err = h.do(pkgAction(false), idxAction, "test@bla@x@")
-	assert.NotNil(t, rm)
-	assert.Error(t, err)
+	is.True(rm != nil)
+	is.True(err != nil)
 	ce, ok := err.(*collection.Error)
 	if !ok {
 		t.Fatalf("did not get a collection error, got %v (%T)", ce, ce)
 	}
-	assert.Contains(t, ce.Error(), "test@bla@x@")
+	is.True(strings.Contains(ce.Error(), "test@bla@x@"))
 }
 
 func TestParse(t *testing.T) {
+	is := is.New(t)
+
 	tests := []struct {
 		in    string
 		out   Package
@@ -226,75 +235,83 @@ func TestParse(t *testing.T) {
 
 	for _, tt := range tests {
 		p, err := parse(tt.in)
-		assert.Equal(t, tt.out, p)
-		assert.Equal(t, tt.isErr, err != nil)
+		is.Equal(tt.out, p)
+		is.Equal(tt.isErr, err != nil)
 	}
 }
 
 func TestGetPackages(t *testing.T) {
+	is := is.New(t)
+
 	h := newTestHandler(t)
 	pkgs, err := h.getPackages()
-	assert.NoError(t, err)
-	assert.Equal(t, h.Packages, pkgs)
+	is.NoErr(err)
+	is.Equal(h.Packages, pkgs)
 	pkgs[0].URL = "somethingdifferent"
-	assert.NotEqual(t, h.Packages[0], pkgs[0])
+	is.True(h.Packages[0] != pkgs[0])
 
 	packages := []string{"test@master", "test2", "test3@v3.0.0"}
 	pkgs, err = h.getPackages(packages...)
-	assert.NoError(t, err)
-	assert.Equal(t, packages[0], pkgs[0].String())
-	assert.Equal(t, packages[1], pkgs[1].String())
-	assert.Equal(t, packages[2], pkgs[2].String())
+	is.NoErr(err)
+	is.Equal(packages[0], pkgs[0].String())
+	is.Equal(packages[1], pkgs[1].String())
+	is.Equal(packages[2], pkgs[2].String())
 
 	packages = append(packages, "invalid@package@url")
 	pkgs, err = h.getPackages(packages...)
-	assert.Error(t, err)
-	assert.Equal(t, packages[0], pkgs[0].String())
-	assert.Equal(t, packages[1], pkgs[1].String())
-	assert.Equal(t, packages[2], pkgs[2].String())
+	is.True(err != nil)
+	is.Equal(packages[0], pkgs[0].String())
+	is.Equal(packages[1], pkgs[1].String())
+	is.Equal(packages[2], pkgs[2].String())
 }
 
 func TestIndexActions(t *testing.T) {
+	is := is.New(t)
+
 	h := newTestHandler(t)
 	tp1 := Package{"test.com/test", "latest"}
 	h.addToIndex(tp1)
-	assert.Equal(t, tp1, h.Packages[len(h.Packages)-1])
+	is.Equal(tp1, h.Packages[len(h.Packages)-1])
 	tp2 := h.Packages[0]
 	tp2.Version = "latest"
 	h.addToIndex(tp2)
-	assert.Equal(t, tp2, h.Packages[0])
+	is.Equal(tp2, h.Packages[0])
 
 	tp2.Version = "newlatest"
 	h.upgradeIndex(tp2)
-	assert.Equal(t, tp2, h.Packages[0])
+	is.Equal(tp2, h.Packages[0])
 
 	h.removeFromIndex(tp2)
-	assert.Equal(t, tp1, h.Packages[0])
-	assert.Len(t, h.Packages, 1)
+	is.Equal(tp1, h.Packages[0])
+	is.True(len(h.Packages) == 1)
 
 	// package should not be added to the index
 	// because we just deleted it
 	h.upgradeIndex(tp2)
-	assert.Equal(t, tp1, h.Packages[0])
-	assert.Len(t, h.Packages, 1)
+	is.Equal(tp1, h.Packages[0])
+	is.True(len(h.Packages) == 1)
 }
 
 func TestHasActions(t *testing.T) {
+	is := is.New(t)
+
 	h := newTestHandler(t)
 	p := h.Packages[0]
-	assert.True(t, h.hasURL(p))
-	assert.True(t, h.has(p))
+	is.True(h.hasURL(p))
+	is.True(h.has(p))
 
 	p.Version = "somethingelse"
-	assert.True(t, h.hasURL(p))
-	assert.False(t, h.has(p))
+	is.True(h.hasURL(p))
+	is.True(h.has(p) == false)
 
 	p.URL = "somethingelse"
-	assert.False(t, h.hasURL(p))
-	assert.False(t, h.has(p))
+	is.True(h.hasURL(p) == false)
+	is.True(h.has(p) == false)
 }
 
 func TestMatchSemVer(t *testing.T) {
+	is := is.New(t)
+
 	tests := []struct {
 		in  string
 		out bool
@@ -309,12 +326,14 @@ func TestMatchSemVer(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.in, func(t *testing.T) {
 			res := matchSemVer(tt.in)
-			assert.Equal(t, tt.out, res)
+			is.Equal(tt.out, res)
 		})
 	}
 }
 
 func TestExtractBinaryName(t *testing.T) {
+	is := is.New(t)
+
 	tests := []struct {
 		in  string
 		out string
@@ -329,7 +348,7 @@ func TestExtractBinaryName(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.in, func(t *testing.T) {
 			res := extractBinaryName(tt.in)
-			assert.Equal(t, tt.out, res)
+			is.Equal(tt.out, res)
 		})
 	}
 }

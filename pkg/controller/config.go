@@ -91,8 +91,7 @@ func (cfg *Configuration) save() error {
 		return errors.Wrapf(err, "could not marshal config file")
 	}
 
-	err = f.Truncate(0)
-	if err != nil {
+	if err = f.Truncate(0); err != nil {
 		return errors.Wrapf(err, "could not clear config file to overwrite")
 	}
 

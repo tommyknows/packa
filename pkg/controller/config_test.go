@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"encoding/json"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -37,7 +38,6 @@ settings:
 	defer os.Remove(destFile.Name())
 
 	// write the config into the source file
-
 	err = ioutil.WriteFile(sourceFile.Name(), testCfg, 0700)
 	is.NoErr(err)
 
@@ -53,4 +53,25 @@ settings:
 	d, err := ioutil.ReadFile(destFile.Name())
 	is.NoErr(err)
 	is.Equal(string(testCfg), string(d))
+
+	// simulate removal of a package.
+	// tests for bug in #6
+	noPackages := json.RawMessage("[]")
+	ctl.configuration.Packages["fakeHandler"] = &noPackages
+
+	err = ctl.configuration.save()
+	is.NoErr(err)
+
+	smallerCfg := []byte(`packages:
+  fakeHandler: []
+  thirdHandler:
+  - totest: something
+settings:
+  handler:
+    fakeHandler:
+      workingDir: /tmp
+`)
+	d, err = ioutil.ReadFile(destFile.Name())
+	is.NoErr(err)
+	is.Equal(string(smallerCfg), string(d))
 }

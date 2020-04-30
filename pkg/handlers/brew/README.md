@@ -4,6 +4,8 @@
 
 Install formulae through `homebrew`.
 
+To install brew casks, use "cask" as the first argument before the package name.
+
 ## Settings
 
 The following settings are available for the Brew handler:
@@ -13,6 +15,7 @@ The following settings are available for the Brew handler:
 | `taps` | []string | a list of taps which to use as a source for formulae. The handler will automatically cleanup taps that are not listed here |
 | `printCommandOutput` | Boolean | If true, print the go get command's output on the fly |
 | `updateOnInit` | Boolean | If true, runs `brew update` when initialising the handler |
+| cask | Boolean | If true, the formula is a cask, meaning it will be handled through `brew cask` |
 
 ## Formula Definition
 

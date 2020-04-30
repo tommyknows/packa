@@ -150,7 +150,7 @@ func (b *Handler) install(f formula) error {
 
 func (b *Handler) remove(f formula) error {
 	output.Info("📦 Brew\t\tRemoving formula %s", f)
-	err := f.remove(b.Config.PrintCommandOutput)
+	err := f.uninstall(b.Config.PrintCommandOutput)
 	if err == nil {
 		output.Success("📦 Brew\t\tRemoved formula %s", f)
 	}
@@ -248,7 +248,7 @@ func (b *Handler) addToIndex(f formula) {
 func (b *Handler) getFormulae(forms ...string) (formulae, error) {
 	var e collection.Error
 	if len(forms) == 0 {
-		klog.V(5).Infof("Brew: No packages defined, using all packages from go handler")
+		klog.V(5).Infof("Brew: No packages defined, using all packages from brew handler")
 		// make it safe to modify
 		packages := make(formulae, len(b.Formulae))
 		copy(packages, b.Formulae)
@@ -256,8 +256,14 @@ func (b *Handler) getFormulae(forms ...string) (formulae, error) {
 	}
 
 	var f formulae
+	var isCask bool
+	if forms[0] == "cask" {
+		isCask = true
+		forms = forms[1:]
+	}
+
 	for _, pkg := range forms {
-		p, err := parse(pkg)
+		p, err := parse(pkg, isCask)
 		if err != nil {
 			klog.V(6).Infof("Brew: Error when parsing %v: %v", pkg, err)
 			e.Add(pkg, err)

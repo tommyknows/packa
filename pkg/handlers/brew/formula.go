@@ -16,6 +16,7 @@ type formula struct {
 	Name    string `json:"name"`
 	Tap     string `json:"tap,omitempty"`
 	Version string `json:"version,omitempty"`
+	Cask    bool   `json:"cask,omitempty"`
 }
 
 type formulae []formula
@@ -52,19 +53,33 @@ func (f formula) pin() error {
 }
 
 func (f formula) install(printOutput bool) error {
-	_, err := brewExec("install", f.String(), printOutput)
+	e := brewExec
+	if f.Cask {
+		e = brewCaskExec
+	}
+
+	_, err := e("install", f.String(), printOutput)
 	return errors.Wrapf(err, "could not install formula %s", f)
 }
 
-func (f formula) remove(printOutput bool) error {
-	_, err := brewExec("remove", f.fullname(), printOutput)
+func (f formula) uninstall(printOutput bool) error {
+	e := brewExec
+	if f.Cask {
+		e = brewCaskExec
+	}
+
+	_, err := e("uninstall", f.fullname(), printOutput)
 	return errors.Wrapf(err, "could not remove formula %s", f)
 }
 
 func (f formula) upgrade(printOutput bool) error {
+	args := []string{"brew"}
+	if f.Cask {
+		args = append(args, "cask")
+	}
 	// code from brewExec, but with additional error handling
 	out, err := cmd.Execute(
-		[]string{"brew", "upgrade", f.String()},
+		append(args, "upgrade", f.String()),
 		cmd.DirectPrint(bool(klog.V(5)) || printOutput),
 	)
 	// only print output if error occured and we have
@@ -81,8 +96,18 @@ func (f formula) upgrade(printOutput bool) error {
 }
 
 func brewExec(action, form string, printOutput bool) (out string, err error) {
+	out, err = exec(printOutput, action, form)
+	return out, errors.Wrapf(err, "could not %s %s", action, form)
+}
+
+func brewCaskExec(action, form string, printOutput bool) (out string, err error) {
+	out, err = exec(printOutput, "cask", action, form)
+	return out, errors.Wrapf(err, "could not %s cask %s", action, form)
+}
+
+func exec(printOutput bool, args ...string) (out string, err error) {
 	out, err = cmd.Execute(
-		[]string{"brew", action, form},
+		append([]string{"brew"}, args...),
 		cmd.DirectPrint(bool(klog.V(5)) || printOutput),
 	)
 	// only print output if error occured and we have
@@ -90,10 +115,10 @@ func brewExec(action, form string, printOutput bool) (out string, err error) {
 	if err != nil && !printOutput && !bool(klog.V(5)) {
 		output.Warn(out)
 	}
-	return out, errors.Wrapf(err, "could not %s %s", action, form)
+	return out, err
 }
 
-func parse(form string) (formula, error) {
+func parse(form string, cask bool) (formula, error) {
 	var f formula
 	// extract the version
 	if strings.Contains(form, "@") {
@@ -112,5 +137,6 @@ func parse(form string) (formula, error) {
 		form = t[len(t)-1]
 	}
 	f.Name = form
+	f.Cask = cask
 	return f, nil
 }

@@ -15,12 +15,13 @@ func TestParse(t *testing.T) {
 	is := is.New(t)
 
 	tests := []struct {
-		in  string
-		out formula
-		err bool
+		name string
+		cask bool
+		out  formula
+		err  bool
 	}{
 		{
-			in: "username/repo/vim",
+			name: "username/repo/vim",
 			out: formula{
 				Name: "vim",
 				Tap:  "username/repo",
@@ -28,7 +29,7 @@ func TestParse(t *testing.T) {
 			err: false,
 		},
 		{
-			in: "vim@8.1.0",
+			name: "vim@8.1.0",
 			out: formula{
 				Name:    "vim",
 				Version: "8.1.0",
@@ -36,29 +37,36 @@ func TestParse(t *testing.T) {
 			err: false,
 		},
 		{
-			in: "username/repo/vim@8.1.0",
+			name: "username/repo/vim@8.1.0",
+			cask: true,
 			out: formula{
 				Name:    "vim",
 				Tap:     "username/repo",
 				Version: "8.1.0",
+				Cask:    true,
 			},
 			err: false,
 		},
 		{
-			in:  "vim@8@8",
-			out: formula{},
-			err: true,
+			name: "vim@8@8",
+			out:  formula{},
+			err:  true,
 		},
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.in, func(t *testing.T) {
-			p, err := parse(tt.in)
+		t.Run(tt.name, func(t *testing.T) {
+			p, err := parse(tt.name, tt.cask)
 			is.Equal(tt.out, p)
 			is.Equal(tt.err, err != nil)
 		})
 	}
 }
+
+var (
+	isCask    = true
+	isNotCask = false
+)
 
 func TestInstall(t *testing.T) {
 	is := is.New(t)
@@ -73,6 +81,7 @@ func TestInstall(t *testing.T) {
 				Name: "somepackage",
 			},
 		},
+		cask: &isNotCask,
 	}
 	afterInstall := []formula{
 		{
@@ -122,13 +131,14 @@ func TestInstall(t *testing.T) {
 	})
 }
 
-func TestRemove(t *testing.T) {
+func TestUninstall(t *testing.T) {
 	is := is.New(t)
 
 	// redirect the output logs
 	var buf bytes.Buffer
 	output.Set(&buf, &buf)
 	defer buf.Reset()
+
 	b := Handler{
 		Formulae: []formula{
 			{
@@ -145,15 +155,16 @@ func TestRemove(t *testing.T) {
 				Tap:  "from/tap",
 			},
 		},
+		cask: &isNotCask,
 	}
-	afterRemove := []formula{
+	afterUninstall := []formula{
 		{Name: "thispackage"},
 		{
 			Name:    "pkg",
 			Version: "version",
 		},
 	}
-	afterRmJSON, err := json.Marshal(afterRemove)
+	afterRmJSON, err := json.Marshal(afterUninstall)
 	is.NoErr(err)
 
 	c := make(chan []string, 20)
@@ -170,8 +181,8 @@ func TestRemove(t *testing.T) {
 	}
 
 	is.Equal(executedCommands, [][]string{
-		{"brew", "remove", "somepackage"},
-		{"brew", "remove", "from/tap/betterpkg"},
+		{"brew", "uninstall", "somepackage"},
+		{"brew", "uninstall", "from/tap/betterpkg"},
 	})
 }
 
@@ -182,6 +193,7 @@ func TestUpgrade(t *testing.T) {
 	var buf bytes.Buffer
 	output.Set(&buf, &buf)
 	defer buf.Reset()
+
 	b := Handler{
 		Formulae: []formula{
 			{
@@ -198,6 +210,7 @@ func TestUpgrade(t *testing.T) {
 				Tap:  "from/tap",
 			},
 		},
+		cask: &isNotCask,
 	}
 	afterUpgrade := []formula{
 		{
@@ -272,4 +285,74 @@ func TestUpgrade(t *testing.T) {
 	}
 
 	is.Equal(executedCommands, [][]string{{"brew", "upgrade", "thispackage"}})
+}
+
+func TestCaskInstall(t *testing.T) {
+	is := is.New(t)
+
+	// redirect the output logs
+	var buf bytes.Buffer
+	output.Set(&buf, &buf)
+	defer buf.Reset()
+	b := Handler{
+		Formulae: []formula{
+			{
+				Name: "somepackage",
+			},
+		},
+		cask: &isCask,
+	}
+	afterInstall := []formula{
+		{
+			Name:    "somepackage",
+			Version: "newer",
+			Cask:    true,
+		},
+		{
+			Name: "thispackage",
+			Cask: true,
+		},
+		{
+			Name:    "pkg",
+			Version: "version",
+			Cask:    true,
+		},
+		{
+			Name: "betterpkg",
+			Tap:  "from/tap",
+			Cask: true,
+		},
+		{
+			Name:    "another",
+			Tap:     "this/tap",
+			Version: "0.0.1",
+			Cask:    true,
+		},
+	}
+	afterInstJSON, err := json.Marshal(afterInstall)
+	is.NoErr(err)
+
+	c := make(chan []string, 20)
+	cmd.AddGlobalOptions(fake.NoOp(c, "someoutput"))
+	defer cmd.ResetGlobalOptions()
+	list, err := b.Install("thispackage", "pkg@version", "from/tap/betterpkg", "this/tap/another@0.0.1", "somepackage@newer")
+	is.NoErr(err)
+	is.Equal(afterInstJSON, []byte(*list))
+
+	close(c)
+	var executedCommands [][]string
+	for execedCmd := range c {
+		executedCommands = append(executedCommands, execedCmd)
+	}
+
+	is.Equal(executedCommands, [][]string{
+		{"brew", "cask", "install", "thispackage"},
+		{"brew", "cask", "install", "pkg@version"},
+		{"brew", "pin", "pkg"},
+		{"brew", "cask", "install", "from/tap/betterpkg"},
+		{"brew", "cask", "install", "this/tap/another@0.0.1"},
+		{"brew", "pin", "this/tap/another"},
+		{"brew", "cask", "install", "somepackage@newer"},
+		{"brew", "pin", "somepackage"},
+	})
 }

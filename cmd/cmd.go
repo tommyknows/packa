@@ -1,18 +1,33 @@
 package cmd
 
 import (
+	"io"
 	"os"
 	"path"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
-	"github.com/tommyknows/packa/cmd/subcmd"
 	"github.com/tommyknows/packa/pkg/controller"
 	"github.com/tommyknows/packa/pkg/defaults"
 	"github.com/tommyknows/packa/pkg/handlers/brew"
 	"github.com/tommyknows/packa/pkg/handlers/goget"
+	"github.com/tommyknows/packa/pkg/output"
 	"k8s.io/klog"
 )
+
+// If we did some kind of official binary release, we could
+// set this version in the pipeline to the actual release
+// version and / or commit id. but we don't, so indicate that
+// people grabbed this from master
+var version = "master"
+
+const Name = "packa"
+
+type PackageHandler interface {
+	controller.PackageHandler
+	Name() string
+	Command() *cobra.Command
+}
 
 // NewPackaCommand returns the root command for packa
 func NewPackaCommand() *cobra.Command {
@@ -20,7 +35,7 @@ func NewPackaCommand() *cobra.Command {
 	var ctl *controller.Controller
 	cmd := &cobra.Command{
 		Version:      version,
-		Use:          "packa",
+		Use:          Name,
 		Short:        "packa is a package manager",
 		SilenceUsage: true,
 	}
@@ -36,21 +51,40 @@ func NewPackaCommand() *cobra.Command {
 		}
 	}
 
+	h := make(map[string]controller.PackageHandler)
+	for _, handler := range []PackageHandler{goget.New(), brew.New()} {
+		h[handler.Name()] = handler
+	}
+
 	ctl, err := controller.New(
 		controller.ConfigFile(cfgFile),
-		controller.RegisterHandlers(map[string]controller.PackageHandler{
-			"brew": brew.New(),
-			"go":   goget.New(),
-		}),
+		controller.RegisterHandlers(h),
 	)
 	if err != nil {
 		klog.Fatalf("could not create controller: %v", err)
 	}
 
-	cmd.AddCommand(subcmd.NewInstallCommand(ctl))
-	cmd.AddCommand(subcmd.NewUpgradeCommand(ctl))
-	cmd.AddCommand(subcmd.NewRemoveCommand(ctl))
-	cmd.AddCommand(subcmd.NewListCommand(ctl))
+	subcmds := []func(*controller.Controller) *cobra.Command{
+		installCommand,
+		upgradeCommand,
+		removeCommand,
+		listCommand,
+	}
+
+	for _, handler := range h {
+		// this conversion is save as we cast it from a
+		// PackageHandler when adding it to the map.
+		c := handler.(PackageHandler).Command()
+		for _, sub := range subcmds {
+			c.AddCommand(sub(ctl))
+		}
+		cmd.AddCommand(c)
+	}
+
+	// these commands can be called without a handler
+	// to do an operation on all of them.
+	cmd.AddCommand(upgradeCommand(ctl))
+	cmd.AddCommand(listCommand(ctl))
 
 	return cmd
 }
@@ -79,4 +113,24 @@ func createConfigFile() (cfgFilePath string, err error) {
 		klog.Infof("Created empty config file at %v", cfgFile)
 	}
 	return cfgFile, nil
+}
+
+// always try to close the controller, this will save the config
+// file. if an error occurred on closing but we are already returning
+// a non-nil error, we just log it.
+// if no err would be returned normally, we overwrite it
+// use it with:
+//  defer func() {
+//    err = close(ctl, err)
+//  }()
+func close(ctl io.Closer, inerr error) (outerr error) {
+	outerr = inerr
+	if err := ctl.Close(); err != nil {
+		if inerr != nil {
+			output.Warn(err.Error())
+			return nil
+		}
+		outerr = err
+	}
+	return outerr
 }

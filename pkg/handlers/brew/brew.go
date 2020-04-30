@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 
 	"github.com/pkg/errors"
+	"github.com/spf13/cobra"
 	"github.com/tommyknows/packa/pkg/cmd"
 	"github.com/tommyknows/packa/pkg/collection"
 	"github.com/tommyknows/packa/pkg/output"
@@ -21,6 +22,7 @@ func (e errorConst) Error() string {
 type Handler struct {
 	Config   configuration
 	Formulae formulae
+	cask     *bool
 }
 
 type configuration struct {
@@ -56,6 +58,48 @@ func (b *Handler) Init(config *json.RawMessage, formulaeList *json.RawMessage) e
 
 	err := b.Config.Taps.sync()
 	return err
+}
+
+func (b *Handler) Command() *cobra.Command {
+	c := &cobra.Command{
+		Use:   handlerName + " <action> [formulae]",
+		Short: "HANDLER: brew packages",
+		Long: `installs packages (formulae) through the MacOS utility brew.
+
+Formulae are defined through '[tap]/<formulaname>@[version]'. For example:
+
+# Install formula "vim"
+vim
+
+# Install formula "vim" at version 8.1.0
+vim@8.1.0
+
+# Install formula "vim" from tap "mycool/tap":
+mycool/tap/vim
+
+# Intsall formula "vim" from tap "mycool/tap" at version 8.1.0:
+mycool/tap/vim@8.1.0
+
+If the version has been specified, the formula will be pinned automatically.
+
+If a pinned formula is upgraded (through the "upgrade" command) with a new version,
+the new version will be pinned again.
+If a pinned formula is upgraded with no new version specified, it will be unpinned
+and upgraded.
+
+When upgrading all formulae, pinned ones will not be upgraded.
+`,
+	}
+
+	b.cask = c.PersistentFlags().Bool("cask", false, "handle a cask (brew cask)")
+
+	return c
+}
+
+const handlerName = "brew"
+
+func (b *Handler) Name() string {
+	return handlerName
 }
 
 // New returns a handler with the default settings. They will be overwritten
@@ -150,7 +194,7 @@ func (b *Handler) install(f formula) error {
 
 func (b *Handler) remove(f formula) error {
 	output.Info("📦 Brew\t\tRemoving formula %s", f)
-	err := f.remove(b.Config.PrintCommandOutput)
+	err := f.uninstall(b.Config.PrintCommandOutput)
 	if err == nil {
 		output.Success("📦 Brew\t\tRemoved formula %s", f)
 	}
@@ -248,7 +292,7 @@ func (b *Handler) addToIndex(f formula) {
 func (b *Handler) getFormulae(forms ...string) (formulae, error) {
 	var e collection.Error
 	if len(forms) == 0 {
-		klog.V(5).Infof("Brew: No packages defined, using all packages from go handler")
+		klog.V(5).Infof("Brew: No packages defined, using all packages from brew handler")
 		// make it safe to modify
 		packages := make(formulae, len(b.Formulae))
 		copy(packages, b.Formulae)
@@ -256,8 +300,9 @@ func (b *Handler) getFormulae(forms ...string) (formulae, error) {
 	}
 
 	var f formulae
+
 	for _, pkg := range forms {
-		p, err := parse(pkg)
+		p, err := parse(pkg, *b.cask)
 		if err != nil {
 			klog.V(6).Infof("Brew: Error when parsing %v: %v", pkg, err)
 			e.Add(pkg, err)

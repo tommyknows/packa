@@ -8,8 +8,8 @@
 ## Development
 
 To write new handlers, one has to implement the `PackageHandler` interface
-defined in `pkg/controller/controller.go`.
-After that, the handler can be registered in `app/cmd/cmd.go`.
+defined in `cmd/cmd.go`.
+After that, the handler needs to be registered in `cmd/cmd.go`.
 
 The interface should be well enough described to get going. Some informal
 conventions are listed here.

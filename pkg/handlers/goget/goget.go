@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
+	"github.com/spf13/cobra"
 	"github.com/tommyknows/packa/pkg/cmd"
 	"github.com/tommyknows/packa/pkg/collection"
 	"github.com/tommyknows/packa/pkg/defaults"
@@ -78,6 +79,28 @@ func (goH *Handler) Init(config *json.RawMessage, packages *json.RawMessage) err
 	}
 	klog.V(4).Infof("GoGet: Added package list %v", goH.Packages)
 	return nil
+}
+
+func (goH *Handler) Command() *cobra.Command {
+	return &cobra.Command{
+		Use:   handlerName + " <action> [URLs]",
+		Short: "HANDLER: go packages",
+		Long: `go installs Go packages by executing go get.
+
+The package name follows the Go convention with [URL]@[Version]. If no version
+is set, it will use latest.
+
+If packages are pinned to a specific version, the packages will not be upgraded.
+If you want to upgrade pinned packages, use the install command with the new
+version (or just set the version to "latest" anyway if you're as lazy as I am)
+`,
+	}
+}
+
+const handlerName = "go"
+
+func (goH *Handler) Name() string {
+	return handlerName
 }
 
 // New returns a handler with the default settings. They will be overwritten

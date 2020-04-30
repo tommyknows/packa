@@ -39,7 +39,12 @@ func (e *Error) IfNotEmpty() error {
 
 // Implements the error interface
 func (e Error) Error() (s string) {
-	// TODO: make this tabular?
+	if len(e) == 1 {
+		for _, err := range e {
+			return err.Error()
+		}
+	}
+
 	for name, err := range e {
 		s += fmt.Sprintf("\n%v:\t%s", name, err.Error())
 	}
